@@ -1,0 +1,934 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User Management
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  password      String?
+  role          UserRole  @default(USER)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  activities    UserActivity[]
+  contacts      Contact[]
+  opportunities Opportunity[]
+  reports       Report[]
+  alerts        Alert[]
+  settings      UserSettings?
+  subscription  Subscription?
+  invoices      Invoice[]
+  usageRecords  UsageRecord[]
+  paymentMethods PaymentMethod[]
+  syncConfigs   SyncConfig[]
+
+  @@map("users")
+}
+
+// User Settings and API Credentials
+model UserSettings {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // JetNet API Credentials
+  jetnetApiKey    String?  // Encrypted
+  jetnetAuthToken String?  // Encrypted
+  jetnetBaseUrl   String?  @default("https://customer.jetnetconnect.com/api")
+
+  // GoHighLevel CRM Credentials
+  ghlApiKey       String?  // Encrypted
+  ghlLocationId   String?
+  ghlBaseUrl      String?  @default("https://rest.gohighlevel.com/v1")
+
+  // Email Configuration
+  smtpHost        String?
+  smtpPort        Int?
+  smtpUser        String?  // Encrypted
+  smtpPass        String?  // Encrypted
+
+  // Other API Keys
+  weatherApiKey   String?  // Encrypted
+  mapsApiKey      String?  // Encrypted
+
+  // User Preferences
+  timezone        String?  @default("America/New_York")
+  currency        String?  @default("USD")
+  dateFormat      String?  @default("MM/DD/YYYY")
+  notifications   Json?    // Store notification preferences as JSON
+
+  // Security
+  twoFactorEnabled Boolean @default(false)
+  lastPasswordChange DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+// Subscription and Billing Management
+model Subscription {
+  id                String            @id @default(cuid())
+  userId            String            @unique
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Stripe Integration
+  stripeCustomerId  String?           @unique
+  stripeSubscriptionId String?        @unique
+  stripePriceId     String?
+  stripeProductId   String?
+
+  // Subscription Details
+  plan              SubscriptionPlan  @default(FREE)
+  status            SubscriptionStatus @default(ACTIVE)
+  billingCycle      BillingCycle      @default(MONTHLY)
+
+  // Pricing
+  amount            Decimal           @db.Decimal(10, 2)
+  currency          String            @default("USD")
+
+  // Dates
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  trialStart        DateTime?
+  trialEnd          DateTime?
+  canceledAt        DateTime?
+
+  // Features and Limits
+  maxAircraftSearches Int             @default(10)
+  maxReportsPerMonth  Int             @default(5)
+  maxContacts         Int             @default(100)
+  maxApiCallsPerMonth Int             @default(1000)
+  maxStorageGB        Int             @default(1)
+  hasAdvancedAnalytics Boolean        @default(false)
+  hasCustomBranding    Boolean        @default(false)
+  hasPrioritySupport   Boolean        @default(false)
+  hasApiAccess         Boolean        @default(false)
+  hasWhiteLabel        Boolean        @default(false)
+  hasCustomIntegrations Boolean       @default(false)
+
+  // Usage Tracking
+  currentAircraftSearches Int         @default(0)
+  currentReportsThisMonth Int         @default(0)
+  currentApiCallsThisMonth Int       @default(0)
+  currentStorageUsedMB    Int         @default(0)
+
+  // Metadata
+  metadata          Json?             // Store additional subscription data
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id                String            @id @default(cuid())
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Stripe Integration
+  stripeInvoiceId   String?           @unique
+  stripePaymentIntentId String?
+  stripeChargeId   String?
+
+  // Invoice Details
+  number            String            @unique
+  status            InvoiceStatus     @default(DRAFT)
+  amount            Decimal           @db.Decimal(10, 2)
+  currency          String            @default("USD")
+  tax               Decimal?         @db.Decimal(10, 2)
+  total             Decimal           @db.Decimal(10, 2)
+
+  // Dates
+  issueDate         DateTime          @default(now())
+  dueDate           DateTime?
+  paidAt            DateTime?
+
+  // Billing Period
+  periodStart       DateTime
+  periodEnd         DateTime
+
+  // Items
+  items             Json              // Store invoice line items as JSON
+
+  // Payment Details
+  paymentMethod     String?
+  paymentStatus     PaymentStatus     @default(PENDING)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("invoices")
+}
+
+model UsageRecord {
+  id                String            @id @default(cuid())
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Usage Details
+  feature           UsageFeature
+  quantity          Int               @default(1)
+  metadata          Json?             // Store additional usage data
+
+  // Billing Period
+  periodStart       DateTime
+  periodEnd         DateTime
+
+  // Cost Calculation
+  unitCost          Decimal?          @db.Decimal(10, 4)
+  totalCost         Decimal?          @db.Decimal(10, 2)
+
+  createdAt         DateTime          @default(now())
+
+  @@map("usage_records")
+}
+
+model PaymentMethod {
+  id                String            @id @default(cuid())
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Stripe Integration
+  stripePaymentMethodId String         @unique
+
+  // Payment Method Details
+  type              PaymentMethodType
+  brand             String?           // Visa, Mastercard, etc.
+  last4             String?
+  expMonth          Int?
+  expYear           Int?
+
+  // Billing Address
+  billingAddress    Json?             // Store billing address as JSON
+
+  // Status
+  isDefault         Boolean           @default(false)
+  isActive          Boolean           @default(true)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("payment_methods")
+}
+
+model Plan {
+  id                String            @id @default(cuid())
+
+  // Stripe Integration
+  stripeProductId   String?           @unique
+  stripePriceId     String?           @unique
+
+  // Plan Details
+  name              String
+  description       String?           @db.Text
+  planType          SubscriptionPlan
+  billingCycle      BillingCycle
+
+  // Pricing
+  amount            Decimal           @db.Decimal(10, 2)
+  currency          String            @default("USD")
+
+  // Features and Limits
+  maxAircraftSearches Int
+  maxReportsPerMonth  Int
+  maxContacts         Int
+  maxApiCallsPerMonth Int
+  maxStorageGB        Int
+  hasAdvancedAnalytics Boolean
+  hasCustomBranding    Boolean
+  hasPrioritySupport   Boolean
+  hasApiAccess         Boolean
+  hasWhiteLabel        Boolean
+  hasCustomIntegrations Boolean
+
+  // Status
+  isActive          Boolean           @default(true)
+  isPopular         Boolean           @default(false)
+  sortOrder         Int               @default(0)
+
+  // Trial
+  trialDays         Int?              // Free trial days
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("plans")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Aircraft Management - JetNet Integration
+model Aircraft {
+  id              String   @id @default(cuid())
+  aircraftId      Int?     @unique // JetNet's unique ID
+  name            String?
+  manufacturer    String
+  model           String
+  variant         String?
+  year            Int?
+  yearManufactured Int?    // Alternative year field
+  price           Decimal? @db.Decimal(15, 2)
+  askingPrice     Decimal? @db.Decimal(15, 2) // Alternative price field
+  currency        String   @default("USD")
+  location        String?
+  status          AircraftStatus @default(AVAILABLE)
+  image           String?
+  description     String?  @db.Text
+  specifications  Json?    // Store specifications as JSON
+  features        Json?    // Store features as JSON
+  contactInfo     Json?    // Store contact info as JSON
+  marketData      Json?    // Store market data as JSON
+  maintenanceData Json?    // Store maintenance data as JSON
+  ownershipData   Json?    // Store ownership data as JSON
+
+  // Additional fields expected by code
+  registration    String?
+  make            String?
+  serialNumber    String?
+  forSale         Boolean? @default(true)
+  totalTimeHours  Decimal? @db.Decimal(10, 2)
+  engineHours     Decimal? @db.Decimal(10, 2)
+  dateListed      DateTime?
+
+  lastUpdated     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  images          AircraftImage[]
+  companyRelations AircraftCompanyRelationship[]
+  leadScores      LeadScore[]
+  marketDataRecords MarketData[]
+  alerts          Alert[]
+  opportunities  Opportunity[]
+  reports        Report[]
+
+  @@map("aircraft")
+}
+
+// Aircraft Images
+model AircraftImage {
+  id              String   @id @default(cuid())
+  aircraftId      String
+  url             String
+  thumbnailUrl    String?
+  type            String   @default("Exterior")
+  caption         String?
+  isHero          Boolean  @default(false)
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  aircraft        Aircraft @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+
+  @@map("aircraft_images")
+}
+
+// Companies - JetNet Integration
+model Company {
+  id              String   @id @default(cuid())
+  companyId       Int      @unique // JetNet's unique ID
+  companyName     String
+  businessType    String?
+  address1        String?
+  address2        String?
+  city            String?
+  state           String?
+  zipCode         String?
+  country         String?
+  phone           String?
+  email           String?
+  website         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  contacts        Contact[]
+  aircraftRelations AircraftCompanyRelationship[]
+  leadScores      LeadScore[]
+
+  @@map("companies")
+}
+
+// Aircraft-Company Relationships
+model AircraftCompanyRelationship {
+  id              String   @id @default(cuid())
+  aircraftId      String   // References aircraft.id
+  companyId       String   // References companies.id
+  relationshipType String   // 'owner', 'operator', 'management', etc.
+  status          Boolean  @default(true)
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime @default(now())
+
+  // Relations
+  aircraft        Aircraft @relation(fields: [aircraftId], references: [id])
+  company         Company  @relation(fields: [companyId], references: [id])
+
+  @@map("aircraft_company_relationships")
+}
+
+// Lead Scoring System
+model LeadScore {
+  id                String   @id @default(cuid())
+  aircraftId        String   // References aircraft.id
+  companyId         String?  // References companies.id
+  priorityLevel     String   @default("STANDARD") // 'CRITICAL', 'HIGH', 'MEDIUM', 'STANDARD'
+  commissionPotential Decimal? @db.Decimal(15, 2) // Calculated 3% of aircraft value
+  tags              String[] // Array of tags like 'CJ4 Owner', 'Douglas Specialty'
+  ghlContactId      String?  // GoHighLevel contact ID when synced
+  ghlOpportunityId String?  // GoHighLevel opportunity ID
+  researchStatus    String   @default("CONTACT_INFO_NEEDED")
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  aircraft          Aircraft @relation(fields: [aircraftId], references: [id])
+  company           Company? @relation(fields: [companyId], references: [id])
+
+  @@map("lead_scores")
+}
+
+// API Sync Logs
+model ApiSyncLog {
+  id                String   @id @default(cuid())
+  syncType          String   // 'aircraft', 'companies', 'contacts'
+  status            String   // 'SUCCESS', 'FAILED', 'PARTIAL'
+  recordsProcessed  Int      @default(0)
+  recordsCreated    Int      @default(0)
+  recordsUpdated    Int      @default(0)
+  errorMessage      String?  @db.Text
+  syncDurationMs    Int?
+  startedAt         DateTime @default(now())
+  completedAt       DateTime?
+
+  @@map("api_sync_logs")
+}
+
+// Data Sync Configuration
+model SyncConfig {
+  id                String   @id @default(cuid())
+  userId            String?  // If null, applies to all users
+  user              User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Sync Settings
+  isEnabled         Boolean  @default(true)
+  syncFrequency     SyncFrequency @default(DAILY)
+  syncTime          String   @default("02:00") // 24-hour format (HH:MM)
+  timezone          String   @default("America/New_York")
+
+  // Sync Options
+  batchSize         Int      @default(50)
+  forceUpdate       Boolean  @default(false)
+  includeImages     Boolean  @default(true)
+  includeMarketData Boolean  @default(true)
+  maxRetries        Int      @default(3)
+
+  // Sync Scope
+  syncAircraft      Boolean  @default(true)
+  syncCompanies     Boolean  @default(true)
+  syncContacts      Boolean  @default(true)
+  syncTransactions  Boolean  @default(true)
+  syncMarketData    Boolean  @default(true)
+
+  // Last Sync Info
+  lastSyncAt        DateTime?
+  lastSyncStatus    String?  // 'success', 'failed', 'partial'
+  nextSyncAt        DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId])
+  @@map("sync_configs")
+}
+
+// Market Stats
+model MarketStats {
+  id                String   @id @default(cuid())
+  totalAircraft     Int      @default(0)
+  monthlyGrowth     Decimal  @default(0) @db.Decimal(5, 2)
+  activeListings    Int      @default(0)
+  avgPrice          Decimal  @default(0) @db.Decimal(15, 2)
+  lastUpdated       DateTime @default(now())
+
+  @@map("market_stats")
+}
+
+// Market Trends
+model MarketTrend {
+  id                String   @id @default(cuid())
+  period            String   // '30d', '90d', '1y'
+  category          String   @default("all")
+  aircraftCount     Int      @default(0)
+  avgPrice          Decimal  @default(0) @db.Decimal(15, 2)
+  transactions      Int      @default(0)
+  marketValue       Decimal  @default(0) @db.Decimal(15, 2)
+  lastUpdated       DateTime @default(now())
+
+  @@unique([period, category])
+  @@map("market_trends")
+}
+
+// Indexes for performance
+// Note: Prisma doesn't support direct index creation in schema,
+// but these should be created via migration scripts
+
+// Contact Management - JetNet Integration
+model Contact {
+  id              String   @id @default(cuid())
+  contactId       Int      @unique // JetNet's unique ID
+  companyId       Int?     // References companies.companyId
+  firstName       String?
+  lastName        String?
+  title           String?
+  email           String?
+  phone           String?
+  mobile          String?
+
+  // Additional fields expected by code
+  name            String?  // Computed field or separate name field
+  company         String?  // Company name (not relation)
+  position        String?  // Alternative to title
+  status          ContactStatus @default(LEAD)
+  lastContact     DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  companyRelation Company? @relation(fields: [companyId], references: [companyId])
+  opportunities   Opportunity[]
+  activities      ContactActivity[]
+  alerts          Alert[]
+  user            User?    @relation(fields: [userId], references: [id])
+  userId          String?
+
+  @@map("contacts")
+}
+
+model ContactActivity {
+  id          String   @id @default(cuid())
+  contactId   String
+  type        ActivityType
+  title       String
+  description String?  @db.Text
+  date        DateTime
+  duration    Int?     // Duration in minutes
+  outcome     String?
+  createdAt   DateTime @default(now())
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@map("contact_activities")
+}
+
+// Opportunity Management
+model Opportunity {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?  @db.Text
+  value           Decimal? @db.Decimal(15, 2)
+  currency        String   @default("USD")
+  stage           OpportunityStage @default(QUALIFIED)
+  probability     Int      @default(50) // Percentage
+  expectedCloseDate DateTime?
+  actualCloseDate DateTime?
+  status          OpportunityStatus @default(OPEN)
+  source          String?
+  notes           String?  @db.Text
+  customFields    Json?    // Store custom fields as JSON
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  contactId       String?
+  contact         Contact? @relation(fields: [contactId], references: [id])
+  aircraftId      String?
+  aircraft        Aircraft? @relation(fields: [aircraftId], references: [id])
+  activities      OpportunityActivity[]
+
+  @@map("opportunities")
+}
+
+model OpportunityActivity {
+  id              String   @id @default(cuid())
+  opportunityId   String
+  type            ActivityType
+  title           String
+  description     String?  @db.Text
+  date            DateTime
+  duration        Int?     // Duration in minutes
+  outcome         String?
+  createdAt       DateTime @default(now())
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("opportunity_activities")
+}
+
+// Market Intelligence
+model MarketData {
+  id              String   @id @default(cuid())
+  aircraftId      String?
+  make            String
+  model           String
+  category        String
+  avgPrice        Decimal  @db.Decimal(15, 2)
+  minPrice        Decimal  @db.Decimal(15, 2)
+  maxPrice        Decimal  @db.Decimal(15, 2)
+  totalListings   Int
+  avgDaysOnMarket Int
+  priceTrend      PriceTrend
+  marketTrend     MarketTrendType
+  dataDate        DateTime
+  source          String   @default("JetNet")
+  rawData         Json?    // Store raw API response
+  createdAt       DateTime @default(now())
+
+  aircraft Aircraft? @relation(fields: [aircraftId], references: [id])
+
+  @@map("market_data")
+}
+
+// Reports and Analytics
+model Report {
+  id              String   @id @default(cuid())
+  title           String
+  type            ReportType
+  description     String?  @db.Text
+  parameters      Json?    // Store report parameters as JSON
+  data            Json?    // Store report data as JSON
+  status          ReportStatus @default(PENDING)
+  generatedAt     DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  aircraftId      String?
+  aircraft        Aircraft? @relation(fields: [aircraftId], references: [id])
+
+  @@map("reports")
+}
+
+// Alerts and Notifications
+model Alert {
+  id              String   @id @default(cuid())
+  title           String
+  message         String   @db.Text
+  type            AlertType
+  priority        AlertPriority @default(MEDIUM)
+  status          AlertStatus @default(ACTIVE)
+  isRead          Boolean  @default(false)
+  actionUrl       String?
+  metadata        Json?    // Store additional data as JSON
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  contactId       String?
+  contact         Contact? @relation(fields: [contactId], references: [id])
+  aircraftId      String?
+  aircraft        Aircraft? @relation(fields: [aircraftId], references: [id])
+
+  @@map("alerts")
+}
+
+// User Activity Tracking
+model UserActivity {
+  id              String   @id @default(cuid())
+  userId          String
+  action          String
+  resource        String?
+  resourceId      String?
+  details         Json?    // Store additional details as JSON
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_activities")
+}
+
+// Activity model for general activity tracking
+model Activity {
+  id              String   @id @default(cuid())
+  type            ActivityType
+  title           String
+  description     String?  @db.Text
+  date            DateTime
+  duration        Int?     // Duration in minutes
+  outcome         String?
+  metadata        Json?    // Store additional data as JSON
+  createdAt       DateTime @default(now())
+
+  @@map("activities")
+}
+
+// Sync Log model
+model SyncLog {
+  id                String   @id @default(cuid())
+  syncType          String   // 'aircraft', 'companies', 'contacts'
+  status            String   // 'SUCCESS', 'FAILED', 'PARTIAL'
+  recordsProcessed  Int      @default(0)
+  recordsCreated    Int      @default(0)
+  recordsUpdated    Int      @default(0)
+  errorMessage      String?  @db.Text
+  syncDurationMs    Int?
+  startedAt         DateTime @default(now())
+  completedAt       DateTime?
+
+  @@map("sync_logs")
+}
+
+// System Configuration
+model SystemConfig {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  value           String   @db.Text
+  description     String?
+  isEncrypted     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
+  VIEWER
+}
+
+enum AircraftStatus {
+  AVAILABLE
+  SOLD
+  UNDER_CONTRACT
+  MAINTENANCE
+  INSPECTION
+  WITHDRAWN
+}
+
+enum ContactStatus {
+  LEAD
+  PROSPECT
+  CUSTOMER
+  INACTIVE
+}
+
+enum OpportunityStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum OpportunityStatus {
+  OPEN
+  WON
+  LOST
+  CANCELLED
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  DEMO
+  PROPOSAL
+  FOLLOW_UP
+  OTHER
+}
+
+enum PriceTrend {
+  RISING
+  FALLING
+  STABLE
+  VOLATILE
+}
+
+enum MarketTrendType {
+  HOT
+  WARM
+  COOL
+  COLD
+}
+
+enum ReportType {
+  SALES_SUMMARY
+  MARKET_ANALYSIS
+  CONTACT_REPORT
+  OPPORTUNITY_PIPELINE
+  AIRCRAFT_INVENTORY
+  CUSTOM
+}
+
+enum ReportStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum AlertType {
+  SYSTEM
+  MARKET
+  CONTACT
+  OPPORTUNITY
+  AIRCRAFT
+  CUSTOM
+}
+
+enum AlertPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+// Subscription and Billing Enums
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+  TRIALING
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  PAUSED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+  PARTIALLY_PAID
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentMethodType {
+  CARD
+  BANK_ACCOUNT
+  PAYPAL
+  APPLE_PAY
+  GOOGLE_PAY
+}
+
+enum UsageFeature {
+  AIRCRAFT_SEARCH
+  REPORT_GENERATION
+  CONTACT_MANAGEMENT
+  API_CALL
+  DATA_EXPORT
+  CUSTOM_INTEGRATION
+  STORAGE_USAGE
+  EMAIL_NOTIFICATIONS
+  SMS_NOTIFICATIONS
+  ADVANCED_ANALYTICS
+}
+
+enum SyncFrequency {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  MANUAL
+}

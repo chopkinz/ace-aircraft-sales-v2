@@ -1,0 +1,601 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  image         String?
+  password      String?
+  role          UserRole       @default(USER)
+  isActive      Boolean        @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  accounts      Account[]
+  alerts        Alert[]
+  contacts      Contact[]
+  opportunities Opportunity[]
+  reports       Report[]
+  sessions      Session[]
+  activities    UserActivity[]
+  settings      UserSettings?
+
+  @@map("users")
+}
+
+model UserSettings {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  jetnetApiKey    String?
+  jetnetAuthToken String?
+  jetnetBaseUrl   String?  @default("https://customer.jetnetconnect.com/api")
+  ghlApiKey       String?
+  smtpUser        String?
+  smtpPass        String?
+  weatherApiKey   String?
+  mapsApiKey      String?
+  timezone        String?  @default("America/New_York")
+  currency        String?  @default("USD")
+  dateFormat      String?  @default("MM/DD/YYYY")
+  notifications   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Aircraft {
+  id                String                        @id @default(cuid())
+  aircraftId        Int?                          @unique
+  name              String?
+  manufacturer      String
+  model             String
+  variant           String?
+  year              Int?
+  yearManufactured  Int?
+  price             Float?
+  askingPrice       Float?
+  currency          String                        @default("USD")
+  location          String?
+  status            AircraftStatus                @default(AVAILABLE)
+  image             String?
+  description       String?
+  specifications    String?
+  features          String?
+  contactInfo       String?
+  marketData        String?
+  maintenanceData   String?
+  ownershipData     String?
+  registration      String?
+  make              String?
+  serialNumber      String?
+  forSale           Boolean?                      @default(true)
+  totalTimeHours    Float?
+  engineHours       Float?
+  dateListed        DateTime?
+  lastUpdated       DateTime                      @default(now())
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+  companyRelations  AircraftCompanyRelationship[]
+  images            AircraftImage[]
+  alerts            Alert[]
+  evaluations       Evaluation[]
+  leadScores        LeadScore[]
+  marketDataRecords MarketData[]
+  opportunities     Opportunity[]
+  reports           Report[]
+
+  @@index([manufacturer])
+  @@index([model])
+  @@index([year])
+  @@index([price])
+  @@index([location])
+  @@index([status])
+  @@index([forSale])
+  @@index([registration])
+  @@index([serialNumber])
+  @@index([createdAt])
+  @@index([manufacturer, model])
+  @@index([year, price])
+  @@index([status, forSale])
+  @@map("aircraft")
+}
+
+model AircraftImage {
+  id           String   @id @default(cuid())
+  aircraftId   String
+  url          String
+  thumbnailUrl String?
+  type         String   @default("Exterior")
+  caption      String?
+  isHero       Boolean  @default(false)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  aircraft     Aircraft @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+
+  @@map("aircraft_images")
+}
+
+model Company {
+  id                String                        @id @default(cuid())
+  companyId         Int                           @unique
+  companyName       String
+  businessType      String?
+  address1          String?
+  address2          String?
+  city              String?
+  state             String?
+  zipCode           String?
+  country           String?
+  phone             String?
+  email             String?
+  website           String?
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+  aircraftRelations AircraftCompanyRelationship[]
+  contacts          Contact[]
+  leadScores        LeadScore[]
+
+  @@map("companies")
+}
+
+model AircraftCompanyRelationship {
+  id               String    @id @default(cuid())
+  aircraftId       String
+  companyId        String
+  relationshipType String
+  status           Boolean   @default(true)
+  startDate        DateTime?
+  endDate          DateTime?
+  createdAt        DateTime  @default(now())
+  aircraft         Aircraft  @relation(fields: [aircraftId], references: [id])
+  company          Company   @relation(fields: [companyId], references: [id])
+
+  @@map("aircraft_company_relationships")
+}
+
+model LeadScore {
+  id                  String   @id @default(cuid())
+  aircraftId          String
+  companyId           String?
+  priorityLevel       String   @default("STANDARD")
+  commissionPotential Float?
+  tags                String
+  ghlContactId        String?
+  ghlOpportunityId    String?
+  researchStatus      String   @default("CONTACT_INFO_NEEDED")
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  aircraft            Aircraft @relation(fields: [aircraftId], references: [id])
+  company             Company? @relation(fields: [companyId], references: [id])
+
+  @@map("lead_scores")
+}
+
+model ApiSyncLog {
+  id               String    @id @default(cuid())
+  syncType         String
+  status           String
+  recordsProcessed Int       @default(0)
+  recordsCreated   Int       @default(0)
+  recordsUpdated   Int       @default(0)
+  errorMessage     String?
+  syncDurationMs   Int?
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  @@map("api_sync_logs")
+}
+
+model MarketStats {
+  id             String   @id @default(cuid())
+  totalAircraft  Int      @default(0)
+  monthlyGrowth  Float    @default(0)
+  activeListings Int      @default(0)
+  avgPrice       Float    @default(0)
+  lastUpdated    DateTime @default(now())
+
+  @@map("market_stats")
+}
+
+model MarketTrend {
+  id            String   @id @default(cuid())
+  period        String
+  category      String   @default("all")
+  aircraftCount Int      @default(0)
+  avgPrice      Float    @default(0)
+  transactions  Int      @default(0)
+  marketValue   Float    @default(0)
+  lastUpdated   DateTime @default(now())
+
+  @@unique([period, category])
+  @@map("market_trends")
+}
+
+model Contact {
+  id              String            @id @default(cuid())
+  contactId       Int               @unique
+  companyId       Int?
+  firstName       String?
+  lastName        String?
+  title           String?
+  email           String?
+  phone           String?
+  mobile          String?
+  name            String?
+  company         String?
+  position        String?
+  status          ContactStatus     @default(LEAD)
+  lastContact     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  userId          String?
+  alerts          Alert[]
+  activities      ContactActivity[]
+  companyRelation Company?          @relation(fields: [companyId], references: [companyId])
+  user            User?             @relation(fields: [userId], references: [id])
+  opportunities   Opportunity[]
+
+  @@map("contacts")
+}
+
+model ContactActivity {
+  id          String       @id @default(cuid())
+  contactId   String
+  type        ActivityType
+  title       String
+  description String?
+  date        DateTime
+  duration    Int?
+  outcome     String?
+  createdAt   DateTime     @default(now())
+  contact     Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@map("contact_activities")
+}
+
+model Opportunity {
+  id                String                @id @default(cuid())
+  title             String
+  description       String?
+  value             Float?
+  currency          String                @default("USD")
+  stage             OpportunityStage      @default(QUALIFIED)
+  probability       Int                   @default(50)
+  expectedCloseDate DateTime?
+  actualCloseDate   DateTime?
+  status            OpportunityStatus     @default(OPEN)
+  source            String?
+  notes             String?
+  customFields      String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  userId            String?
+  contactId         String?
+  aircraftId        String?
+  aircraft          Aircraft?             @relation(fields: [aircraftId], references: [id])
+  contact           Contact?              @relation(fields: [contactId], references: [id])
+  user              User?                 @relation(fields: [userId], references: [id])
+  activities        OpportunityActivity[]
+
+  @@map("opportunities")
+}
+
+model OpportunityActivity {
+  id            String       @id @default(cuid())
+  opportunityId String
+  type          ActivityType
+  title         String
+  description   String?
+  date          DateTime
+  duration      Int?
+  outcome       String?
+  createdAt     DateTime     @default(now())
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("opportunity_activities")
+}
+
+model MarketData {
+  id              String          @id @default(cuid())
+  aircraftId      String?
+  make            String
+  model           String
+  category        String
+  avgPrice        Float
+  minPrice        Float
+  maxPrice        Float
+  totalListings   Int
+  avgDaysOnMarket Int
+  priceTrend      PriceTrend
+  marketTrend     MarketTrendType
+  dataDate        DateTime
+  source          String          @default("JetNet")
+  rawData         String?
+  createdAt       DateTime        @default(now())
+  aircraft        Aircraft?       @relation(fields: [aircraftId], references: [id])
+
+  @@map("market_data")
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  title       String
+  type        ReportType
+  description String?
+  parameters  String?
+  data        String?
+  status      ReportStatus @default(PENDING)
+  generatedAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  userId      String?
+  aircraftId  String?
+  aircraft    Aircraft?    @relation(fields: [aircraftId], references: [id])
+  user        User?        @relation(fields: [userId], references: [id])
+
+  @@map("reports")
+}
+
+model Alert {
+  id         String        @id @default(cuid())
+  title      String
+  message    String
+  type       AlertType
+  priority   AlertPriority @default(MEDIUM)
+  status     AlertStatus   @default(ACTIVE)
+  isRead     Boolean       @default(false)
+  actionUrl  String?
+  metadata   String?
+  expiresAt  DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  userId     String?
+  contactId  String?
+  aircraftId String?
+  aircraft   Aircraft?     @relation(fields: [aircraftId], references: [id])
+  contact    Contact?      @relation(fields: [contactId], references: [id])
+  user       User?         @relation(fields: [userId], references: [id])
+
+  @@map("alerts")
+}
+
+model UserActivity {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  resource   String?
+  resourceId String?
+  details    String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_activities")
+}
+
+model Activity {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  title       String
+  description String?
+  date        DateTime
+  duration    Int?
+  outcome     String?
+  metadata    String?
+  createdAt   DateTime     @default(now())
+
+  @@map("activities")
+}
+
+model SyncLog {
+  id               String    @id @default(cuid())
+  syncType         String
+  status           String
+  recordsProcessed Int       @default(0)
+  recordsCreated   Int       @default(0)
+  recordsUpdated   Int       @default(0)
+  errorMessage     String?
+  syncDurationMs   Int?
+  metadata         String?
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  @@map("sync_logs")
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  isEncrypted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+model Evaluation {
+  id          String           @id @default(cuid())
+  aircraftId  String
+  type        EvaluationType
+  title       String
+  parameters  String?
+  data        String?
+  status      EvaluationStatus @default(PENDING)
+  generatedAt DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  aircraft    Aircraft         @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+
+  @@map("evaluations")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
+  VIEWER
+}
+
+enum AircraftStatus {
+  AVAILABLE
+  SOLD
+  UNDER_CONTRACT
+  MAINTENANCE
+  INSPECTION
+  WITHDRAWN
+}
+
+enum ContactStatus {
+  LEAD
+  PROSPECT
+  CUSTOMER
+  INACTIVE
+}
+
+enum OpportunityStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum OpportunityStatus {
+  OPEN
+  WON
+  LOST
+  CANCELLED
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  DEMO
+  PROPOSAL
+  FOLLOW_UP
+  OTHER
+}
+
+enum PriceTrend {
+  RISING
+  FALLING
+  STABLE
+  VOLATILE
+}
+
+enum MarketTrendType {
+  HOT
+  WARM
+  COOL
+  COLD
+}
+
+enum ReportType {
+  SALES_SUMMARY
+  MARKET_ANALYSIS
+  CONTACT_REPORT
+  OPPORTUNITY_PIPELINE
+  AIRCRAFT_INVENTORY
+  CUSTOM
+}
+
+enum ReportStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum AlertType {
+  SYSTEM
+  MARKET
+  CONTACT
+  OPPORTUNITY
+  AIRCRAFT
+  CUSTOM
+}
+
+enum AlertPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum EvaluationType {
+  MARKET_VALUE
+  CONDITION_ASSESSMENT
+  COMPREHENSIVE
+  PRE_PURCHASE
+  INSURANCE
+  APPRAISAL
+}
+
+enum EvaluationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
