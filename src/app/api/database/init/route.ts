@@ -7,11 +7,15 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔧 Initializing database with sample data...');
 
-    // Clear existing data
-    await prisma.marketData.deleteMany();
-    await prisma.aircraft.deleteMany();
-    await prisma.marketStats.deleteMany();
-    await prisma.apiSyncLog.deleteMany();
+    // Try to clear existing data, but don't fail if database doesn't exist
+    try {
+      await prisma.marketData.deleteMany();
+      await prisma.aircraft.deleteMany();
+      await prisma.marketStats.deleteMany();
+      await prisma.apiSyncLog.deleteMany();
+    } catch (error) {
+      console.log('Database not initialized yet, creating new one...');
+    }
 
     // Create sample aircraft data
     const aircraft = await prisma.aircraft.createMany({
