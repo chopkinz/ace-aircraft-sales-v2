@@ -118,6 +118,7 @@ model Aircraft {
   forSale           Boolean?                      @default(true)
   totalTimeHours    Float?
   engineHours       Float?
+  apuHours          Float?
   cycles            Int?
   dateListed        DateTime?
   lastUpdated       DateTime                      @default(now())

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { jetNetClient } from './jetnet-client';
 
 const prisma = new PrismaClient();
@@ -24,7 +24,6 @@ export interface AircraftSyncData {
 	forSale: boolean;
 	totalTimeHours?: number;
 	engineHours?: number;
-	cycles?: number;
 	apuHours?: number;
 	baseCity?: string;
 	baseState?: string;
@@ -238,18 +237,15 @@ export class JetNetDataManager {
 		await this.syncCompaniesAndContacts();
 
 		// Schedule recurring sync every 6 hours
-		this.syncInterval = setInterval(
-			async () => {
-				try {
-					console.log('⏰ Running scheduled sync...');
-					await this.syncAllAircraftData();
-					await this.syncCompaniesAndContacts();
-				} catch (error) {
-					console.error('❌ Scheduled sync failed:', error);
-				}
-			},
-			6 * 60 * 60 * 1000
-		); // 6 hours
+		this.syncInterval = setInterval(async () => {
+			try {
+				console.log('⏰ Running scheduled sync...');
+				await this.syncAllAircraftData();
+				await this.syncCompaniesAndContacts();
+			} catch (error) {
+				console.error('❌ Scheduled sync failed:', error);
+			}
+		}, 6 * 60 * 60 * 1000); // 6 hours
 
 		console.log('📅 Automatic sync scheduled every 6 hours');
 	}
@@ -257,7 +253,7 @@ export class JetNetDataManager {
 	/**
 	 * Process raw aircraft data from JetNet API
 	 */
-	private processAircraftData(rawData: any[]): AircraftSyncData[] {
+	private processAircraftData(rawData: Record<string, unknown>[]): AircraftSyncData[] {
 		return rawData
 			.map(item => ({
 				aircraftId: item.id || item.aircraftId,
@@ -270,7 +266,6 @@ export class JetNetDataManager {
 				forSale: item.forSale || item.status === 'For Sale' || false,
 				totalTimeHours: item.totalTimeHours || item.totalHours || undefined,
 				engineHours: item.engineHours || undefined,
-				cycles: item.cycles || undefined,
 				apuHours: item.apuHours || undefined,
 				baseCity: item.baseCity || item.location?.city || undefined,
 				baseState: item.baseState || item.location?.state || undefined,
@@ -315,7 +310,6 @@ export class JetNetDataManager {
 							forSale: aircraft.forSale,
 							totalTimeHours: aircraft.totalTimeHours,
 							engineHours: aircraft.engineHours,
-							cycles: aircraft.cycles,
 							apuHours: aircraft.apuHours,
 							baseCity: aircraft.baseCity,
 							baseState: aircraft.baseState,
@@ -339,7 +333,6 @@ export class JetNetDataManager {
 							forSale: aircraft.forSale,
 							totalTimeHours: aircraft.totalTimeHours,
 							engineHours: aircraft.engineHours,
-							cycles: aircraft.cycles,
 							apuHours: aircraft.apuHours,
 							baseCity: aircraft.baseCity,
 							baseState: aircraft.baseState,
@@ -351,7 +344,9 @@ export class JetNetDataManager {
 					created++;
 				}
 			} catch (error) {
-				const errorMsg = `Failed to sync aircraft ${aircraft.aircraftId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+				const errorMsg = `Failed to sync aircraft ${aircraft.aircraftId}: ${
+					error instanceof Error ? error.message : 'Unknown error'
+				}`;
 				errors.push(errorMsg);
 				console.error(errorMsg);
 			}
@@ -417,7 +412,9 @@ export class JetNetDataManager {
 					created++;
 				}
 			} catch (error) {
-				const errorMsg = `Failed to sync company ${company.companyId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+				const errorMsg = `Failed to sync company ${company.companyId}: ${
+					error instanceof Error ? error.message : 'Unknown error'
+				}`;
 				errors.push(errorMsg);
 				console.error(errorMsg);
 			}
@@ -475,7 +472,9 @@ export class JetNetDataManager {
 					created++;
 				}
 			} catch (error) {
-				const errorMsg = `Failed to sync contact ${contact.contactId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+				const errorMsg = `Failed to sync contact ${contact.contactId}: ${
+					error instanceof Error ? error.message : 'Unknown error'
+				}`;
 				errors.push(errorMsg);
 				console.error(errorMsg);
 			}
@@ -487,7 +486,7 @@ export class JetNetDataManager {
 	/**
 	 * Log sync operation to database
 	 */
-	private async logSyncOperation(type: string, result: any): Promise<void> {
+	private async logSyncOperation(type: string, result: Record<string, unknown>): Promise<void> {
 		try {
 			await prisma.apiSyncLog.create({
 				data: {

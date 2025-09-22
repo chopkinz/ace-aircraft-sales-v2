@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/database';
+import { Prisma } from '@prisma/client';
 import { JetNetAPIClient } from '@/lib/jetnet-client';
 import { ApiSyncLog } from '@prisma/client';
 
@@ -76,7 +77,9 @@ export class JetNetDataSyncService {
 							recordsUpdated++;
 						}
 					} catch (error) {
-						const errorMsg = `Failed to sync aircraft ${aircraftItem.id}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+						const errorMsg = `Failed to sync aircraft ${aircraftItem.id}: ${
+							error instanceof Error ? error.message : 'Unknown error'
+						}`;
 						errors.push(errorMsg);
 						console.error(errorMsg);
 					}
@@ -84,7 +87,9 @@ export class JetNetDataSyncService {
 
 				// Update progress
 				console.log(
-					`📈 Processed ${Math.min(i + this.options.batchSize, aircraft.length)}/${aircraft.length} aircraft`
+					`📈 Processed ${Math.min(i + this.options.batchSize, aircraft.length)}/${
+						aircraft.length
+					} aircraft`
 				);
 			}
 
@@ -162,7 +167,6 @@ export class JetNetDataSyncService {
 			forSale: aircraftData.forSale || false,
 			totalTimeHours: aircraftData.totalTimeHours ? parseInt(aircraftData.totalTimeHours) : null,
 			engineHours: aircraftData.engineHours ? parseInt(aircraftData.engineHours) : null,
-			cycles: aircraftData.cycles ? parseInt(aircraftData.cycles) : null,
 			apuHours: aircraftData.apuHours ? parseInt(aircraftData.apuHours) : null,
 			baseCity: aircraftData.baseCity,
 			baseState: aircraftData.baseState,
@@ -175,7 +179,7 @@ export class JetNetDataSyncService {
 			if (this.options.updateExisting) {
 				await prisma.aircraft.update({
 					where: { id: aircraftId },
-					data: aircraftRecord,
+					data: aircraftRecord as Prisma.AircraftUpdateInput,
 				});
 				return { created: false, updated: true };
 			} else {
@@ -183,7 +187,7 @@ export class JetNetDataSyncService {
 			}
 		} else {
 			await prisma.aircraft.create({
-				data: aircraftRecord,
+				data: aircraftRecord as Prisma.AircraftCreateInput,
 			});
 			return { created: true, updated: false };
 		}
@@ -203,13 +207,13 @@ export class JetNetDataSyncService {
 			const companyData = await this.jetnetClient.searchCompanies('', {
 				page: 1,
 				limit: 10000,
-			});
+			} as Record<string, unknown>);
 
-			if (!companyData.success || !companyData.data) {
+			if (!companyData || !Array.isArray(companyData)) {
 				throw new Error('Failed to fetch company data from JetNet API');
 			}
 
-			const companies = companyData.data || [];
+			const companies = companyData || [];
 			console.log(`📊 Found ${companies.length} companies to sync`);
 
 			let recordsProcessed = 0;
@@ -232,14 +236,18 @@ export class JetNetDataSyncService {
 							recordsUpdated++;
 						}
 					} catch (error) {
-						const errorMsg = `Failed to sync company ${companyItem.companyId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+						const errorMsg = `Failed to sync company ${companyItem.companyId}: ${
+							error instanceof Error ? error.message : 'Unknown error'
+						}`;
 						errors.push(errorMsg);
 						console.error(errorMsg);
 					}
 				}
 
 				console.log(
-					`📈 Processed ${Math.min(i + this.options.batchSize, companies.length)}/${companies.length} companies`
+					`📈 Processed ${Math.min(i + this.options.batchSize, companies.length)}/${
+						companies.length
+					} companies`
 				);
 			}
 
@@ -324,7 +332,7 @@ export class JetNetDataSyncService {
 			if (this.options.updateExisting) {
 				await prisma.company.update({
 					where: { companyId },
-					data: companyRecord,
+					data: companyRecord as Prisma.CompanyUpdateInput,
 				});
 				return { created: false, updated: true };
 			} else {
@@ -332,7 +340,7 @@ export class JetNetDataSyncService {
 			}
 		} else {
 			await prisma.company.create({
-				data: companyRecord,
+				data: companyRecord as Prisma.CompanyCreateInput,
 			});
 			return { created: true, updated: false };
 		}
@@ -354,11 +362,11 @@ export class JetNetDataSyncService {
 				limit: 10000,
 			});
 
-			if (!contactData.success || !contactData.data) {
+			if (!contactData || !Array.isArray(contactData)) {
 				throw new Error('Failed to fetch contact data from JetNet API');
 			}
 
-			const contacts = contactData.data || [];
+			const contacts = contactData || [];
 			console.log(`📊 Found ${contacts.length} contacts to sync`);
 
 			let recordsProcessed = 0;
@@ -381,14 +389,18 @@ export class JetNetDataSyncService {
 							recordsUpdated++;
 						}
 					} catch (error) {
-						const errorMsg = `Failed to sync contact ${contactItem.contactId}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+						const errorMsg = `Failed to sync contact ${contactItem.contactId}: ${
+							error instanceof Error ? error.message : 'Unknown error'
+						}`;
 						errors.push(errorMsg);
 						console.error(errorMsg);
 					}
 				}
 
 				console.log(
-					`📈 Processed ${Math.min(i + this.options.batchSize, contacts.length)}/${contacts.length} contacts`
+					`📈 Processed ${Math.min(i + this.options.batchSize, contacts.length)}/${
+						contacts.length
+					} contacts`
 				);
 			}
 

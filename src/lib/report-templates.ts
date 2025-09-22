@@ -409,7 +409,6 @@ export function generateCSVReport(data: ReportData): string {
 		'Status',
 		'Total Hours',
 		'Engine Hours',
-		'Cycles',
 		'For Sale',
 		'Date Listed',
 	];
@@ -426,7 +425,6 @@ export function generateCSVReport(data: ReportData): string {
 		aircraft.status || '',
 		aircraft.totalTimeHours || '',
 		aircraft.engineHours || '',
-		aircraft.cycles || '',
 		aircraft.forSale ? 'Yes' : 'No',
 		aircraft.dateListed ? new Date(aircraft.dateListed as string).toLocaleDateString() : '',
 	]);

@@ -106,15 +106,27 @@ export const GET = async (req: NextRequest) => {
 		}
 
 		if (yearMin || yearMax) {
-			(where as any).year = {};
-			if (yearMin) (where as any).year.gte = parseInt(yearMin);
-			if (yearMax) (where as any).year.lte = parseInt(yearMax);
+			(where as Record<string, unknown>).year = {};
+			if (yearMin) {
+				const yearObj = (where as Record<string, unknown>).year as Record<string, unknown>;
+				yearObj.gte = parseInt(yearMin);
+			}
+			if (yearMax) {
+				const yearObj = (where as Record<string, unknown>).year as Record<string, unknown>;
+				yearObj.lte = parseInt(yearMax);
+			}
 		}
 
 		if (priceMin || priceMax) {
-			(where as any).price = {};
-			if (priceMin) (where as any).price.gte = parseInt(priceMin);
-			if (priceMax) (where as any).price.lte = parseInt(priceMax);
+			(where as Record<string, unknown>).price = {};
+			if (priceMin) {
+				const priceObj = (where as Record<string, unknown>).price as Record<string, unknown>;
+				priceObj.gte = parseInt(priceMin);
+			}
+			if (priceMax) {
+				const priceObj = (where as Record<string, unknown>).price as Record<string, unknown>;
+				priceObj.lte = parseInt(priceMax);
+			}
 		}
 
 		if (location) {
@@ -180,15 +192,33 @@ export const GET = async (req: NextRequest) => {
 
 		// Time-based filters
 		if (totalTimeHoursMin || totalTimeHoursMax) {
-			(where as any).totalTimeHours = {};
-			if (totalTimeHoursMin) (where as any).totalTimeHours.gte = parseInt(totalTimeHoursMin);
-			if (totalTimeHoursMax) (where as any).totalTimeHours.lte = parseInt(totalTimeHoursMax);
+			(where as Record<string, unknown>).totalTimeHours = {};
+			if (totalTimeHoursMin) {
+				const timeObj = (where as Record<string, unknown>).totalTimeHours as Record<
+					string,
+					unknown
+				>;
+				timeObj.gte = parseInt(totalTimeHoursMin);
+			}
+			if (totalTimeHoursMax) {
+				const timeObj = (where as Record<string, unknown>).totalTimeHours as Record<
+					string,
+					unknown
+				>;
+				timeObj.lte = parseInt(totalTimeHoursMax);
+			}
 		}
 
 		if (engineHoursMin || engineHoursMax) {
-			(where as any).engineHours = {};
-			if (engineHoursMin) (where as any).engineHours.gte = parseInt(engineHoursMin);
-			if (engineHoursMax) (where as any).engineHours.lte = parseInt(engineHoursMax);
+			(where as Record<string, unknown>).engineHours = {};
+			if (engineHoursMin) {
+				const engineObj = (where as Record<string, unknown>).engineHours as Record<string, unknown>;
+				engineObj.gte = parseInt(engineHoursMin);
+			}
+			if (engineHoursMax) {
+				const engineObj = (where as Record<string, unknown>).engineHours as Record<string, unknown>;
+				engineObj.lte = parseInt(engineHoursMax);
+			}
 		}
 
 		// Global search across all fields including enriched data
@@ -243,7 +273,7 @@ export const GET = async (req: NextRequest) => {
 						marketData: aircraft.marketData ? JSON.parse(aircraft.marketData) : null,
 						maintenanceData: aircraft.maintenanceData ? JSON.parse(aircraft.maintenanceData) : null,
 						ownershipData: aircraft.ownershipData ? JSON.parse(aircraft.ownershipData) : null,
-					}))
+				  }))
 				: [];
 
 		// Get comprehensive filter options for UI
@@ -397,7 +427,7 @@ export const GET = async (req: NextRequest) => {
 			};
 		})();
 
-		const response: any = {
+		const response: Record<string, unknown> = {
 			aircraft: enrichedAircraft,
 			pagination: {
 				total: totalCount,
@@ -506,21 +536,21 @@ export const GET = async (req: NextRequest) => {
 
 // Helper function to generate aircraft reports
 async function generateAircraftReport(
-	aircraft: any[],
+	aircraft: Record<string, unknown>[],
 	reportType: string,
-	stats: any
+	stats: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
-	const report: any = {
+	const report: Record<string, unknown> = {
 		reportType,
 		generatedAt: new Date().toISOString(),
 		summary: {
 			totalAircraft: aircraft.length,
-			totalValue: aircraft.reduce((sum, a) => sum + (a.price || 0), 0),
-			avgPrice: aircraft.reduce((sum, a) => sum + (a.price || 0), 0) / aircraft.length,
+			totalValue: aircraft.reduce((sum, a) => sum + ((a.price as number) || 0), 0),
+			avgPrice: aircraft.reduce((sum, a) => sum + ((a.price as number) || 0), 0) / aircraft.length,
 			manufacturers: [...new Set(aircraft.map(a => a.manufacturer))],
 			yearRange: {
-				min: Math.min(...aircraft.map(a => a.year || 0)),
-				max: Math.max(...aircraft.map(a => a.year || 0)),
+				min: Math.min(...aircraft.map(a => (a.year as number) || 0)),
+				max: Math.max(...aircraft.map(a => (a.year as number) || 0)),
 			},
 		},
 		detailed: {
@@ -529,9 +559,9 @@ async function generateAircraftReport(
 			byStatus: {},
 			byLocation: {},
 			priceAnalysis: {
-				min: Math.min(...aircraft.map(a => a.price || 0)),
-				max: Math.max(...aircraft.map(a => a.price || 0)),
-				median: aircraft.map(a => a.price || 0).sort((a, b) => a - b)[
+				min: Math.min(...aircraft.map(a => (a.price as number) || 0)),
+				max: Math.max(...aircraft.map(a => (a.price as number) || 0)),
+				median: aircraft.map(a => (a.price as number) || 0).sort((a, b) => a - b)[
 					Math.floor(aircraft.length / 2)
 				],
 			},
@@ -541,33 +571,39 @@ async function generateAircraftReport(
 
 	// Generate breakdowns
 	aircraft.forEach(aircraft => {
+		const detailed = report.detailed as Record<string, Record<string, Record<string, number>>>;
+
 		// By manufacturer
-		if (!report.detailed.byManufacturer[aircraft.manufacturer]) {
-			report.detailed.byManufacturer[aircraft.manufacturer] = { count: 0, totalValue: 0 };
+		const manufacturer = aircraft.manufacturer as string;
+		if (!detailed.byManufacturer[manufacturer]) {
+			detailed.byManufacturer[manufacturer] = { count: 0, totalValue: 0 };
 		}
-		report.detailed.byManufacturer[aircraft.manufacturer].count++;
-		report.detailed.byManufacturer[aircraft.manufacturer].totalValue += aircraft.price || 0;
+		detailed.byManufacturer[manufacturer].count++;
+		detailed.byManufacturer[manufacturer].totalValue += (aircraft.price as number) || 0;
 
 		// By year
-		if (!report.detailed.byYear[aircraft.year]) {
-			report.detailed.byYear[aircraft.year] = { count: 0, totalValue: 0 };
+		const year = aircraft.year as string;
+		if (!detailed.byYear[year]) {
+			detailed.byYear[year] = { count: 0, totalValue: 0 };
 		}
-		report.detailed.byYear[aircraft.year].count++;
-		report.detailed.byYear[aircraft.year].totalValue += aircraft.price || 0;
+		detailed.byYear[year].count++;
+		detailed.byYear[year].totalValue += (aircraft.price as number) || 0;
 
 		// By status
-		if (!report.detailed.byStatus[aircraft.status]) {
-			report.detailed.byStatus[aircraft.status] = { count: 0, totalValue: 0 };
+		const status = aircraft.status as string;
+		if (!detailed.byStatus[status]) {
+			detailed.byStatus[status] = { count: 0, totalValue: 0 };
 		}
-		report.detailed.byStatus[aircraft.status].count++;
-		report.detailed.byStatus[aircraft.status].totalValue += aircraft.price || 0;
+		detailed.byStatus[status].count++;
+		detailed.byStatus[status].totalValue += (aircraft.price as number) || 0;
 
 		// By location
-		if (!report.detailed.byLocation[aircraft.location]) {
-			report.detailed.byLocation[aircraft.location] = { count: 0, totalValue: 0 };
+		const location = aircraft.location as string;
+		if (!detailed.byLocation[location]) {
+			detailed.byLocation[location] = { count: 0, totalValue: 0 };
 		}
-		report.detailed.byLocation[aircraft.location].count++;
-		report.detailed.byLocation[aircraft.location].totalValue += aircraft.price || 0;
+		detailed.byLocation[location].count++;
+		detailed.byLocation[location].totalValue += (aircraft.price as number) || 0;
 	});
 
 	return report;

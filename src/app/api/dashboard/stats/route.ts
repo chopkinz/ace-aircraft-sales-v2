@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { log } from '@/lib/logging/logger';
 import { prisma } from '@/lib/database';
 
-export async function GET(request: NextRequest) {
-	const startTime = Date.now();
+export async function GET() {
 	const requestId = crypto.randomUUID();
 
 	try {

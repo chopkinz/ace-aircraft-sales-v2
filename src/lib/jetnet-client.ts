@@ -749,7 +749,6 @@ export class JetNetAPIClient {
 			// Maintenance information
 			maintenance: {
 				totalTime: parseFloat(jetnetAircraft.TotalHours || jetnetAircraft.Hours) || 0,
-				totalCycles: parseFloat(jetnetAircraft.TotalCycles) || 0,
 				maintenanceStatus: 'Unknown',
 			},
 
@@ -887,7 +886,6 @@ export class JetNetAPIClient {
 			},
 			maintenance: {
 				totalTime: apiData.totalTimeHours || apiData.totalTime || null,
-				totalCycles: apiData.cycles || null,
 				maintenanceStatus: 'Unknown',
 			},
 			market: {

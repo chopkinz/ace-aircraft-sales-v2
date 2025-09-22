@@ -63,7 +63,6 @@ interface Aircraft {
 	aircraftId?: number;
 	totalTimeHours?: number;
 	engineHours?: number;
-	cycles?: number;
 	image?: string;
 	description?: string;
 	forSale?: boolean;
@@ -88,9 +87,13 @@ export function AircraftMarketEvaluation() {
 	const [sortBy, setSortBy] = useState('createdAt');
 	const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 	const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+	const [currentPage, setCurrentPage] = useState(1);
+	const [itemsPerPage, setItemsPerPage] = useState(50);
+	const [totalItems, setTotalItems] = useState(0);
 	const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+	const [stats, setStats] = useState<Record<string, unknown>>({});
 	const [generatedReports, setGeneratedReports] = useState<
 		Array<{
 			id: string;
@@ -250,12 +253,24 @@ export function AircraftMarketEvaluation() {
 		const fetchAircraft = async () => {
 			try {
 				setLoading(true);
-				const response = await fetch('/api/database/aircraft/comprehensive');
+				const params = new URLSearchParams({
+					page: currentPage.toString(),
+					limit: itemsPerPage.toString(),
+					sortBy,
+					sortOrder,
+					...(searchTerm && { search: searchTerm }),
+					...(filterManufacturer !== 'all' && { manufacturer: filterManufacturer }),
+					...(filterStatus !== 'all' && { status: filterStatus }),
+				});
+
+				const response = await fetch(`/api/database/aircraft/comprehensive?${params}`);
 				if (!response.ok) {
 					throw new Error('Failed to fetch aircraft data');
 				}
 				const data = await response.json();
 				setAircraft(data.aircraft || []);
+				setStats(data.stats || {});
+				setTotalItems(data.pagination?.total || 0);
 			} catch (error) {
 				console.error('Error fetching aircraft:', error);
 				toast.error('Failed to fetch aircraft data');
@@ -265,7 +280,7 @@ export function AircraftMarketEvaluation() {
 		};
 
 		fetchAircraft();
-	}, []);
+	}, [currentPage, itemsPerPage, sortBy, sortOrder, searchTerm, filterManufacturer, filterStatus]);
 
 	// Fetch generated reports
 	useEffect(() => {
@@ -488,30 +503,50 @@ export function AircraftMarketEvaluation() {
 	}
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6 p-4 sm:p-6 lg:p-8">
 			{/* Header */}
-			<div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-				<div className="space-y-2">
-					<h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">Aircraft Market Evaluation</h2>
-					<p className="text-muted-foreground">
+			<div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+				<div className="space-y-3">
+					<h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+						Aircraft Market Evaluation
+					</h2>
+					<p className="text-muted-foreground text-lg">
 						Comprehensive aircraft inventory and market analysis
 					</p>
+					<div className="flex items-center gap-4 text-sm text-muted-foreground">
+						<div className="flex items-center gap-2">
+							<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+							<span>{totalItems} Aircraft Available</span>
+						</div>
+						<div className="flex items-center gap-2">
+							<DollarSign className="h-4 w-4" />
+							<span>${((stats.totalValue as number) || 0).toLocaleString()}</span>
+						</div>
+					</div>
 				</div>
-				<div className="flex gap-2">
+				<div className="flex flex-wrap gap-3">
 					<Button
 						onClick={generateReport}
 						disabled={isGeneratingReport}
 						variant="outline"
-						className="focus-ring"
+						className="hover:bg-accent/50 transition-all duration-200 border-border/50"
 					>
 						<BarChart3 className="h-4 w-4 mr-2" />
 						{isGeneratingReport ? 'Generating...' : 'Generate Report'}
 					</Button>
-					<Button onClick={exportData} variant="outline" className="focus-ring">
+					<Button
+						onClick={exportData}
+						variant="outline"
+						className="hover:bg-accent/50 transition-all duration-200 border-border/50"
+					>
 						<Download className="h-4 w-4 mr-2" />
 						Export Data
 					</Button>
-					<Button onClick={() => window.location.reload()} variant="outline" className="focus-ring">
+					<Button
+						onClick={() => window.location.reload()}
+						variant="outline"
+						className="hover:bg-accent/50 transition-all duration-200 border-border/50"
+					>
 						<RefreshCw className="h-4 w-4 mr-2" />
 						Refresh
 					</Button>
@@ -520,7 +555,7 @@ export function AircraftMarketEvaluation() {
 
 			{/* Stats Cards */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-				<Card>
+				<Card className="bg-gradient-to-br from-background/50 to-background/30 border-border/50 hover:shadow-lg transition-all duration-300">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium text-muted-foreground">
 							Total Aircraft
@@ -528,14 +563,12 @@ export function AircraftMarketEvaluation() {
 						<Plane className="h-4 w-4 text-primary" />
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">{aircraft.length}</div>
-						<p className="text-xs text-muted-foreground">
-							{aircraft.filter(a => a.status === 'AVAILABLE').length} available
-						</p>
+						<div className="text-2xl font-bold">{totalItems}</div>
+						<p className="text-xs text-muted-foreground">Available listings</p>
 					</CardContent>
 				</Card>
 
-				<Card>
+				<Card className="bg-gradient-to-br from-background/50 to-background/30 border-border/50 hover:shadow-lg transition-all duration-300">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
 						<DollarSign className="h-4 w-4 text-primary" />
@@ -553,7 +586,7 @@ export function AircraftMarketEvaluation() {
 					</CardContent>
 				</Card>
 
-				<Card>
+				<Card className="bg-gradient-to-br from-background/50 to-background/30 border-border/50 hover:shadow-lg transition-all duration-300">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium text-muted-foreground">
 							Manufacturers
@@ -569,7 +602,7 @@ export function AircraftMarketEvaluation() {
 					</CardContent>
 				</Card>
 
-				<Card>
+				<Card className="bg-gradient-to-br from-background/50 to-background/30 border-border/50 hover:shadow-lg transition-all duration-300">
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 						<CardTitle className="text-sm font-medium text-muted-foreground">
 							Data Quality
@@ -591,7 +624,7 @@ export function AircraftMarketEvaluation() {
 			</div>
 
 			{/* Generated Reports Section */}
-			<Card>
+			<Card className="bg-gradient-to-br from-background/50 to-background/30 border-border/50 hover:shadow-lg transition-all duration-300">
 				<CardHeader>
 					<CardTitle className="flex items-center justify-between">
 						<div className="flex items-center gap-2">
@@ -708,7 +741,7 @@ export function AircraftMarketEvaluation() {
 			</Card>
 
 			{/* Filters */}
-			<Card>
+			<Card className="bg-gradient-to-br from-background/50 to-background/30 border-border/50 hover:shadow-lg transition-all duration-300">
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
 						<Filter className="h-5 w-5" />
@@ -807,7 +840,7 @@ export function AircraftMarketEvaluation() {
 			</Card>
 
 			{/* Aircraft List */}
-			<Card>
+			<Card className="bg-gradient-to-br from-background/50 to-background/30 border-border/50 hover:shadow-lg transition-all duration-300">
 				<CardHeader>
 					<CardTitle className="flex items-center justify-between">
 						<div className="flex items-center gap-2">
@@ -1009,6 +1042,79 @@ export function AircraftMarketEvaluation() {
 					)}
 				</CardContent>
 			</Card>
+
+			{/* Pagination Controls */}
+			{totalItems > itemsPerPage && (
+				<Card className="bg-gradient-to-r from-background/50 to-background/30 border-border/50 hover:shadow-lg transition-all duration-300">
+					<CardContent className="p-4">
+						<div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+							<div className="flex items-center gap-2 text-sm text-muted-foreground">
+								<span>
+									Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} to{' '}
+									{Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} aircraft
+								</span>
+							</div>
+							<div className="flex items-center gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+									disabled={currentPage === 1}
+									className="hover:bg-accent/50 transition-colors"
+								>
+									Previous
+								</Button>
+								<div className="flex items-center gap-1">
+									{Array.from(
+										{ length: Math.min(5, Math.ceil(totalItems / itemsPerPage)) },
+										(_, i) => {
+											const page = i + 1;
+											return (
+												<Button
+													key={page}
+													variant={currentPage === page ? 'default' : 'outline'}
+													size="sm"
+													onClick={() => setCurrentPage(page)}
+													className="w-8 h-8 p-0 hover:bg-accent/50 transition-colors"
+												>
+													{page}
+												</Button>
+											);
+										}
+									)}
+								</div>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() =>
+										setCurrentPage(prev => Math.min(Math.ceil(totalItems / itemsPerPage), prev + 1))
+									}
+									disabled={currentPage >= Math.ceil(totalItems / itemsPerPage)}
+									className="hover:bg-accent/50 transition-colors"
+								>
+									Next
+								</Button>
+							</div>
+							<div className="flex items-center gap-2">
+								<Label className="text-sm text-muted-foreground">Per page:</Label>
+								<Select
+									value={itemsPerPage.toString()}
+									onValueChange={value => setItemsPerPage(Number(value))}
+								>
+									<SelectTrigger className="w-20">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="25">25</SelectItem>
+										<SelectItem value="50">50</SelectItem>
+										<SelectItem value="100">100</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+			)}
 
 			{/* Aircraft Detail Dialog */}
 			<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -1268,11 +1374,11 @@ export function AircraftMarketEvaluation() {
 												</div>
 												<div className="space-y-2">
 													<Label className="text-sm font-medium text-muted-foreground">
-														Cycles
+														Engine Hours
 													</Label>
 													<p className="text-base font-semibold">
-														{selectedAircraft.cycles
-															? selectedAircraft.cycles.toLocaleString()
+														{selectedAircraft.engineHours
+															? selectedAircraft.engineHours.toLocaleString()
 															: 'N/A'}
 													</p>
 												</div>
@@ -1486,17 +1592,73 @@ export function AircraftMarketEvaluation() {
 											</div>
 										</CardContent>
 									</Card>
-
+									{/* Aircraft */}
+									{Boolean((selectedReport.data as Record<string, unknown>)?.aircraft) && (
+										<Card>
+											<CardHeader>
+												<CardTitle className="flex items-center gap-2">
+													<Plane className="h-5 w-5" />
+													Aircraft Data
+												</CardTitle>
+											</CardHeader>
+											<CardContent>
+												<div className="space-y-4">
+													<p className="text-sm text-muted-foreground">
+														{Array.isArray(
+															(selectedReport.data as Record<string, unknown>).aircraft
+														)
+															? `${
+																	(
+																		(selectedReport.data as Record<string, unknown>)
+																			.aircraft as unknown[]
+																	).length
+															  } aircraft found`
+															: 'Aircraft data available'}
+													</p>
+													<pre className="bg-muted p-4 rounded-lg text-xs overflow-auto max-h-64">
+														{JSON.stringify(
+															(selectedReport.data as Record<string, unknown>).aircraft,
+															null,
+															2
+														)}
+													</pre>
+												</div>
+											</CardContent>
+										</Card>
+									)}
 									{/* Market Data */}
-									{(selectedReport.data as Record<string, unknown>)?.marketData && (
-										<MarketDataFormatter
-											data={
-												(selectedReport.data as Record<string, unknown>).marketData as Record<
-													string,
-													unknown
-												>
-											}
-										/>
+									{Boolean((selectedReport.data as Record<string, unknown>)?.marketData) && (
+										<Card>
+											<CardHeader>
+												<CardTitle className="flex items-center gap-2">
+													<BarChart3 className="h-5 w-5" />
+													Market Data
+												</CardTitle>
+											</CardHeader>
+											<CardContent>
+												<div className="space-y-4">
+													<p className="text-sm text-muted-foreground">
+														{Array.isArray(
+															(selectedReport.data as Record<string, unknown>).marketData
+														)
+															? `${
+																	(
+																		(selectedReport.data as Record<string, unknown>)
+																			.marketData as unknown[]
+																	).length
+															  } market records`
+															: 'Market data available'}
+													</p>
+													<pre className="bg-muted p-4 rounded-lg text-xs overflow-auto max-h-64">
+														{JSON.stringify(
+															(selectedReport.data as Record<string, unknown>).marketData,
+															null,
+															2
+														)}
+													</pre>
+												</div>
+											</CardContent>
+										</Card>
 									)}
 
 									{/* Raw Data */}

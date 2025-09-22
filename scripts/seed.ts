@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { jetnetAPI } from '../src/lib/jetnet-api';
 
 const prisma = new PrismaClient();
@@ -89,7 +89,7 @@ async function seedDatabaseWithJetNet() {
 				};
 
 				await prisma.aircraft.create({
-					data: aircraftData,
+					data: aircraftData as Prisma.AircraftCreateInput & Prisma.AircraftUncheckedCreateInput,
 				});
 
 				processedCount++;
