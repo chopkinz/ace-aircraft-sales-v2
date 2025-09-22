@@ -1,13 +1,4 @@
-import {
-	Aircraft,
-	AircraftImage,
-	ApiResponse,
-	SearchParams,
-	SearchResponse,
-	MarketTrend,
-	Company,
-	Transaction,
-} from '@/types';
+import { JetNetAircraftData, JetNetAuthResponse, SyncResult } from '@/types';
 import { tokenManager } from './token-manager';
 
 // Rate Limiter Implementation
@@ -85,7 +76,7 @@ class CircuitBreaker {
 
 // Cache Implementation
 class APICache {
-	private cache = new Map<string, { data: any; expires: number }>();
+	private cache = new Map<string, { data: Record<string, unknown>; expires: number }>();
 	private readonly defaultTtl: number;
 
 	constructor(defaultTtl: number = 300000) {
@@ -93,7 +84,7 @@ class APICache {
 		this.defaultTtl = defaultTtl;
 	}
 
-	get(key: string): any | null {
+	get(key: string): Record<string, unknown> | null {
 		const item = this.cache.get(key);
 		if (!item) return null;
 
@@ -105,7 +96,7 @@ class APICache {
 		return item.data;
 	}
 
-	set(key: string, data: any, ttl?: number): void {
+	set(key: string, data: Record<string, unknown>, ttl?: number): void {
 		const expires = Date.now() + (ttl || this.defaultTtl);
 		this.cache.set(key, { data, expires });
 	}
@@ -146,6 +137,11 @@ export class JetNetAPIClient {
 		this.rateLimiter = new RateLimiter(100, 60000); // 100 requests per minute
 		this.circuitBreaker = new CircuitBreaker(5, 60000); // 5 failures, 1 minute recovery
 		this.cache = new APICache(300000); // 5 minutes default cache
+	}
+
+	// Public method to check authentication status
+	public async isAuthenticated(): Promise<boolean> {
+		return this.ensureAuthenticated();
 	}
 
 	// Authentication Methods
@@ -524,7 +520,7 @@ export class JetNetAPIClient {
 		const endpoint = `/api/Aircraft/getAircraftList/${this.authToken}`;
 
 		// Build JetNet API request body - use MINIMAL filters like working client
-		const requestBody: any = {
+		const requestBody: Record<string, unknown> = {
 			// ONLY the essential filter that works
 			forsale: 'true',
 		};
@@ -614,17 +610,23 @@ export class JetNetAPIClient {
 
 				if (Array.isArray(aircraftArray) && aircraftArray.length > 0) {
 					console.log(`📝 First aircraft:`, JSON.stringify(aircraftArray[0], null, 2));
-					aircraftList = aircraftArray.map((aircraft: any) => this.mapJetNetAircraft(aircraft));
+					aircraftList = aircraftArray.map((aircraft: Record<string, unknown>) =>
+						this.mapJetNetAircraft(aircraft)
+					);
 				}
 			} else {
 				console.log(`❌ JetNet error: ${jetnetData.responsestatus}`);
 			}
 		} else if (jetnetData && Array.isArray(jetnetData)) {
 			// Direct array response
-			aircraftList = jetnetData.map((aircraft: any) => this.mapJetNetAircraft(aircraft));
+			aircraftList = jetnetData.map((aircraft: Record<string, unknown>) =>
+				this.mapJetNetAircraft(aircraft)
+			);
 		} else if (jetnetData && jetnetData.aircraft && Array.isArray(jetnetData.aircraft)) {
 			// Aircraft nested in response
-			aircraftList = jetnetData.aircraft.map((aircraft: any) => this.mapJetNetAircraft(aircraft));
+			aircraftList = jetnetData.aircraft.map((aircraft: Record<string, unknown>) =>
+				this.mapJetNetAircraft(aircraft)
+			);
 		} else {
 			console.log('❓ Unknown JetNet response structure');
 		}
@@ -674,9 +676,9 @@ export class JetNetAPIClient {
 		return sortMap[sort] || 'price';
 	}
 
-	private mapJetNetAircraft(jetnetAircraft: any): Aircraft {
+	private mapJetNetAircraft(jetnetAircraft: Record<string, unknown>): JetNetAircraftData {
 		// Map JetNet's actual field names to simplified Aircraft interface
-		const aircraft: any = {
+		const aircraft: Record<string, unknown> = {
 			id: jetnetAircraft.AircraftID || jetnetAircraft.aircraftid || jetnetAircraft.id || '',
 			registration:
 				jetnetAircraft.Registration ||
@@ -841,7 +843,7 @@ export class JetNetAPIClient {
 	}
 
 	// Data Transformation Methods
-	private transformAircraftData(apiData: any): Aircraft {
+	private transformAircraftData(apiData: Record<string, unknown>): JetNetAircraftData {
 		return {
 			id: apiData.id || apiData.aircraftId || '',
 			registration: apiData.registration || apiData.nNumber || '',
@@ -1089,7 +1091,7 @@ export class JetNetAPIClient {
 		return response.data || [];
 	}
 
-	async getTransactions(filters?: any): Promise<Transaction[]> {
+	async getTransactions(filters?: Record<string, unknown>): Promise<Record<string, unknown>[]> {
 		const response = await this.request<Transaction[]>('/transactions', {
 			method: 'POST',
 			body: JSON.stringify({ filters }),
@@ -1169,7 +1171,7 @@ export class JetNetAPIClient {
 	}
 
 	// Alerts and Notifications
-	async getAlerts(filters?: any): Promise<any[]> {
+	async getAlerts(filters?: Record<string, unknown>): Promise<Record<string, unknown>[]> {
 		const response = await this.request<any[]>(
 			'/alerts',
 			{
@@ -1200,7 +1202,9 @@ export class JetNetAPIClient {
 	}
 
 	// Market Opportunities
-	async getMarketOpportunities(filters?: any): Promise<any[]> {
+	async getMarketOpportunities(
+		filters?: Record<string, unknown>
+	): Promise<Record<string, unknown>[]> {
 		const response = await this.request<any[]>(
 			'/market/opportunities',
 			{
@@ -1219,7 +1223,10 @@ export class JetNetAPIClient {
 	}
 
 	// Data Export
-	async exportAircraftData(filters: any, format: 'csv' | 'json' = 'json'): Promise<string | any> {
+	async exportAircraftData(
+		filters: Record<string, unknown>,
+		format: 'csv' | 'json' = 'json'
+	): Promise<string | Record<string, unknown>> {
 		const response = await this.request<any>(
 			'/aircraft/export',
 			{
@@ -1237,7 +1244,9 @@ export class JetNetAPIClient {
 	}
 
 	// WebSocket Support for Real-time Updates
-	async subscribeToUpdates(callback: (data: any) => void): Promise<WebSocket | null> {
+	async subscribeToUpdates(
+		callback: (data: Record<string, unknown>) => void
+	): Promise<WebSocket | null> {
 		try {
 			await this.ensureAuthenticated();
 

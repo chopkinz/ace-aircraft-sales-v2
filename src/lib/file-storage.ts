@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { Aircraft, MarketTrend, MarketOpportunity, Report, Company, Transaction } from '@/types';
+import { Aircraft, Report, FileUploadResult, StorageConfig, UploadOptions } from '@/types';
 
 // Storage paths configuration
 const STORAGE_PATHS = {
@@ -348,12 +348,12 @@ export class ReportsStorage extends BaseStorage<Report> {
 }
 
 // Cache Storage
-export class CacheStorage extends BaseStorage<any> {
+export class CacheStorage extends BaseStorage<Record<string, unknown>> {
 	constructor() {
 		super(STORAGE_PATHS.cache);
 	}
 
-	async setCache(key: string, data: any, ttl?: number): Promise<void> {
+	async setCache(key: string, data: Record<string, unknown>, ttl?: number): Promise<void> {
 		const expiresAt = ttl ? Date.now() + ttl : null;
 		const cacheEntry = {
 			data,
@@ -365,13 +365,17 @@ export class CacheStorage extends BaseStorage<any> {
 		await this.writeFile(filename, cacheEntry);
 	}
 
-	async getCache(key: string): Promise<any | null> {
+	async getCache(key: string): Promise<Record<string, unknown> | null> {
 		const filename = `cache-${key.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
 		const result = await this.readFile(filename);
 
 		if (!result?.data) return null;
 
-		const cacheEntry = result.data as any;
+		const cacheEntry = result.data as {
+			data: Record<string, unknown>;
+			expiresAt?: number;
+			createdAt: number;
+		};
 
 		// Check if expired
 		if (cacheEntry.expiresAt && Date.now() > cacheEntry.expiresAt) {
@@ -394,7 +398,11 @@ export class CacheStorage extends BaseStorage<any> {
 		for (const file of files) {
 			const result = await this.readFile(file);
 			if (result?.data) {
-				const cacheEntry = result.data as any;
+				const cacheEntry = result.data as {
+					data: Record<string, unknown>;
+					expiresAt?: number;
+					createdAt: number;
+				};
 				if (cacheEntry.expiresAt && Date.now() > cacheEntry.expiresAt) {
 					await this.deleteFile(file);
 					deletedCount++;
@@ -452,23 +460,23 @@ export class AircraftStorage extends BaseStorage<Aircraft> {
 }
 
 // Analytics Storage
-export class AnalyticsStorage extends BaseStorage<any> {
+export class AnalyticsStorage extends BaseStorage<Record<string, unknown>> {
 	constructor() {
 		super(STORAGE_PATHS.analytics);
 	}
 
-	async saveDashboardMetrics(metrics: any): Promise<void> {
+	async saveDashboardMetrics(metrics: Record<string, unknown>): Promise<void> {
 		const filename = 'dashboard-metrics.json';
 		await this.writeFile(filename, metrics);
 	}
 
-	async getDashboardMetrics(): Promise<any | null> {
+	async getDashboardMetrics(): Promise<Record<string, unknown> | null> {
 		const filename = 'dashboard-metrics.json';
 		const result = await this.readFile(filename);
 		return result?.data || null;
 	}
 
-	async saveUserActivity(activity: any): Promise<void> {
+	async saveUserActivity(activity: Record<string, unknown>): Promise<void> {
 		const date = new Date().toISOString().split('T')[0];
 		const filename = `user-activity-${date}.json`;
 
@@ -591,7 +599,7 @@ export class BackupManager {
 			}
 		} catch (error) {
 			// Source directory might not exist, which is fine
-			if ((error as any).code !== 'ENOENT') {
+			if ((error as Error & { code?: string }).code !== 'ENOENT') {
 				throw error;
 			}
 		}
@@ -648,8 +656,8 @@ export class StorageManager {
 		await this.cache.clearExpiredCache();
 	}
 
-	async getSystemStats(): Promise<Record<string, any>> {
-		const stats: Record<string, any> = {};
+	async getSystemStats(): Promise<Record<string, Record<string, unknown>>> {
+		const stats: Record<string, Record<string, unknown>> = {};
 
 		for (const [name, storage] of Object.entries(this)) {
 			if (storage && typeof storage.getStorageStats === 'function') {
