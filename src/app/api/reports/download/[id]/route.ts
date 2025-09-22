@@ -112,7 +112,7 @@ async function generatePDFReport(report: Report, data: ReportData) {
 		return new NextResponse(pdfBuffer as BodyInit, {
 			headers: {
 				'Content-Disposition': `attachment; filename="${report.title.replace(/\s+/g, '_')}.pdf"`,
-				'Content-Type': 'application/pdf',  
+				'Content-Type': 'application/pdf',
 			},
 		});
 	} catch (pdfError) {
