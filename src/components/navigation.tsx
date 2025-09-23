@@ -1,305 +1,315 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import {
-	Plane,
-	Menu,
-	X,
-	Bell,
-	User,
-	Settings,
-	BarChart3,
-	TrendingUp,
-	FileText,
-	Activity,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ModeToggle } from './mode-toggle';
+	AppBar,
+	Toolbar,
+	Button,
+	IconButton,
+	Box,
+	Drawer,
+	List,
+	ListItem,
+	ListItemButton,
+	ListItemIcon,
+	ListItemText,
+	Container,
+	Chip,
+} from '@mui/material';
+import {
+	Menu as MenuIcon,
+	Flight as FlightIcon,
+	Analytics as AnalyticsIcon,
+	Description as DescriptionIcon,
+	Timeline as ActivityIcon,
+	Brightness4 as DarkModeIcon,
+	Brightness7 as LightModeIcon,
+} from '@mui/icons-material';
+import { useMuiTheme } from '@/components/providers/mui-theme-provider';
 import { ACELogo } from '@/components/ui/logo';
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export function Navigation() {
-	const [isOpen, setIsOpen] = useState(false);
+	const [mobileOpen, setMobileOpen] = useState(false);
 	const [scrolled, setScrolled] = useState(false);
+	const [mounted, setMounted] = useState(false);
 	const pathname = usePathname();
+	const { isDark, toggleTheme } = useMuiTheme();
+	const [themeMounted, setThemeMounted] = useState(false);
 
 	useEffect(() => {
+		setMounted(true);
+		setThemeMounted(true);
 		const handleScroll = () => {
-			setScrolled(window.scrollY > 10);
+			setScrolled(window.scrollY > 20);
 		};
 		window.addEventListener('scroll', handleScroll);
 		return () => window.removeEventListener('scroll', handleScroll);
 	}, []);
 
 	const navItems = [
-		{ name: 'Dashboard', href: '/', icon: 'BarChart3', description: 'Overview and stats' },
-		{ name: 'Aircraft', href: '/aircraft', icon: 'Plane', description: 'Browse aircraft listings' },
 		{
-			name: 'Market Analysis',
-			href: '/market',
-			icon: 'TrendingUp',
-			description: 'Market trends and insights',
+			name: 'Aircraft',
+			href: '/aircraft',
+			icon: FlightIcon,
+			description: 'Browse aircraft listings',
+			badge: 'Live',
 		},
-		{ name: 'Reports', href: '/reports', icon: 'FileText', description: 'Generate reports' },
-		{ name: 'Activity', href: '/activity', icon: 'Activity', description: 'System activity logs' },
+		{
+			name: 'Analytics',
+			href: '/analytics',
+			icon: AnalyticsIcon,
+			description: 'Market analytics and insights',
+		},
+		{
+			name: 'Reports',
+			href: '/reports',
+			icon: DescriptionIcon,
+			description: 'Generate market reports',
+		},
+		{
+			name: 'Logs',
+			href: '/logs',
+			icon: ActivityIcon,
+			description: 'System activity logs',
+		},
 	];
 
-	return (
-		<motion.nav
-			initial={{ y: -100 }}
-			animate={{ y: 0 }}
-			className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-				scrolled
-					? 'glass backdrop-blur-lg border-b border-border/50 shadow-lg'
-					: 'bg-background/95 backdrop-blur-lg border-b border-border/20'
-			}`}
-		>
-			<div className="container-responsive">
-				<div className="flex justify-between items-center h-16 lg:h-18">
-					{/* Logo */}
-					<motion.div
-						className="flex items-center space-x-3"
-						whileHover={{ scale: 1.05 }}
-						whileTap={{ scale: 0.95 }}
+	const handleDrawerToggle = () => {
+		setMobileOpen(!mobileOpen);
+	};
+
+	if (!mounted || !themeMounted) {
+		return null;
+	}
+
+	const drawer = (
+		<Box sx={{ width: 280 }}>
+			<Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+				<Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+					<Box
+						sx={{
+							p: 1,
+							color: 'primary.contrastText',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+						}}
 					>
-						<div className="relative">
-							<ACELogo />
-							<motion.div
-								className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"
-								animate={{ scale: [1, 1.2, 1] }}
-								transition={{ duration: 2, repeat: Infinity }}
-							/>
-						</div>
-						<div className="hidden sm:block">
-							<h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-								Aircraft Sales
-							</h1>
-						</div>
-					</motion.div>
+						<ACELogo size="sm" />
+					</Box>
+					{/* <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+						ACE Aircraft
+					</Typography> */}
+				</Box>
+			</Box>
+			<List sx={{ px: 2, py: 1 }}>
+				{navItems.map(item => {
+					const IconComponent = item.icon;
+					const isActive = pathname === item.href;
 
-					{/* Enhanced Desktop Navigation */}
-					<div className="hidden lg:flex items-center space-x-1">
-						{navItems.map((item, index) => {
-							const getIcon = (iconName: string) => {
-								switch (iconName) {
-									case 'BarChart3':
-										return BarChart3;
-									case 'Plane':
-										return Plane;
-									case 'TrendingUp':
-										return TrendingUp;
-									case 'FileText':
-										return FileText;
-									case 'Activity':
-										return Activity;
-									default:
-										return FileText;
-								}
-							};
-							const IconComponent = getIcon(item.icon);
-
-							const isActive = pathname === item.href;
-
-							return (
-								<Link key={item.name} href={item.href}>
-									<motion.div
-										className={`group relative px-4 py-2.5 text-sm font-medium transition-all duration-200 rounded-lg focus-ring flex items-center gap-2 ${
-											isActive
-												? 'text-primary bg-primary/10'
-												: 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-										}`}
-										whileHover={{ y: -2, scale: 1.05 }}
-										whileTap={{ y: 0, scale: 0.95 }}
-										initial={{ opacity: 0, y: -20 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ delay: index * 0.1 }}
+					return (
+						<ListItem key={item.name} disablePadding sx={{ mb: 0.5 }}>
+							<Link href={item.href} style={{ textDecoration: 'none', width: '100%' }}>
+								<ListItemButton
+									onClick={() => setMobileOpen(false)}
+									sx={{
+										borderRadius: 2,
+										bgcolor: isActive ? 'primary.main' : 'transparent',
+										color: isActive ? 'primary.contrastText' : 'text.primary',
+										'&:hover': {
+											bgcolor: isActive ? 'primary.dark' : 'action.hover',
+										},
+										transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+									}}
+								>
+									<ListItemIcon
+										sx={{
+											color: isActive ? 'primary.contrastText' : 'text.secondary',
+											minWidth: 40,
+										}}
 									>
-										<IconComponent className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
-										<span className="hidden xl:inline">{item.name}</span>
-
-										{/* Hover indicator */}
-										<div className="absolute inset-0 rounded-lg bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-									</motion.div>
-								</Link>
-							);
-						})}
-					</div>
-
-					{/* Medium screen navigation */}
-					<div className="hidden md:flex lg:hidden items-center space-x-1">
-						{navItems.slice(0, 3).map((item, index) => {
-							const getIcon = (iconName: string) => {
-								switch (iconName) {
-									case 'BarChart3':
-										return BarChart3;
-									case 'Plane':
-										return Plane;
-									case 'TrendingUp':
-										return TrendingUp;
-									default:
-										return FileText;
-								}
-							};
-							const IconComponent = getIcon(item.icon);
-
-							const isActive = pathname === item.href;
-
-							return (
-								<Link key={item.name} href={item.href}>
-									<motion.div
-										className={`group relative px-3 py-2 text-sm font-medium transition-all duration-200 rounded-lg focus-ring ${
-											isActive
-												? 'text-primary bg-primary/10'
-												: 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-										}`}
-										whileHover={{ y: -1, scale: 1.05 }}
-										whileTap={{ y: 0, scale: 0.95 }}
-										initial={{ opacity: 0, y: -20 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ delay: index * 0.1 }}
-									>
-										<IconComponent className="h-4 w-4" />
-									</motion.div>
-								</Link>
-							);
-						})}
-					</div>
-
-					{/* Right side actions */}
-					<div className="hidden md:flex items-center space-x-2">
-						<motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-							<Button variant="ghost" size="icon" className="relative focus-ring">
-								<Bell className="h-4 w-4" />
-								<Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-									3
-								</Badge>
-							</Button>
-						</motion.div>
-
-						<ModeToggle />
-
-						<motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-							<Button variant="ghost" size="icon" className="focus-ring">
-								<User className="h-4 w-4" />
-							</Button>
-						</motion.div>
-
-						<motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-							<Button variant="ghost" size="icon" className="focus-ring">
-								<Settings className="h-4 w-4" />
-							</Button>
-						</motion.div>
-					</div>
-
-					{/* Mobile menu button */}
-					<div className="md:hidden flex items-center space-x-2">
-						<ModeToggle />
-						<motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={() => setIsOpen(!isOpen)}
-								className="focus-ring"
-							>
-								<AnimatePresence mode="wait">
-									{isOpen ? (
-										<motion.div
-											key="close"
-											initial={{ rotate: -90, opacity: 0 }}
-											animate={{ rotate: 0, opacity: 1 }}
-											exit={{ rotate: 90, opacity: 0 }}
-											transition={{ duration: 0.2 }}
-										>
-											<X className="h-5 w-5" />
-										</motion.div>
-									) : (
-										<motion.div
-											key="menu"
-											initial={{ rotate: 90, opacity: 0 }}
-											animate={{ rotate: 0, opacity: 1 }}
-											exit={{ rotate: -90, opacity: 0 }}
-											transition={{ duration: 0.2 }}
-										>
-											<Menu className="h-5 w-5" />
-										</motion.div>
+										<IconComponent />
+									</ListItemIcon>
+									<ListItemText
+										primary={item.name}
+										secondary={item.description}
+										primaryTypographyProps={{
+											fontWeight: isActive ? 600 : 500,
+											fontSize: '0.95rem',
+										}}
+										secondaryTypographyProps={{
+											fontSize: '0.8rem',
+											color: isActive ? 'primary.contrastText' : 'text.secondary',
+										}}
+									/>
+									{item.badge && (
+										<Chip
+											label={item.badge}
+											size="small"
+											color="success"
+											sx={{
+												ml: 1,
+												fontSize: '0.7rem',
+												height: 20,
+												bgcolor: isActive ? 'rgba(255,255,255,0.2)' : 'success.main',
+												color: isActive ? 'primary.contrastText' : 'success.contrastText',
+											}}
+										/>
 									)}
-								</AnimatePresence>
-							</Button>
-						</motion.div>
-					</div>
-				</div>
+								</ListItemButton>
+							</Link>
+						</ListItem>
+					);
+				})}
+			</List>
+		</Box>
+	);
 
-				{/* Mobile Navigation */}
-				<AnimatePresence>
-					{isOpen && (
-						<motion.div
-							initial={{ opacity: 0, height: 0 }}
-							animate={{ opacity: 1, height: 'auto' }}
-							exit={{ opacity: 0, height: 0 }}
-							transition={{ duration: 0.3, ease: 'easeInOut' }}
-							className="md:hidden overflow-hidden"
+	return (
+		<>
+			<AppBar
+				position="fixed"
+				elevation={scrolled ? 4 : 0}
+				sx={{
+					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+					bgcolor: scrolled ? 'background.paper' : 'transparent',
+					backdropFilter: scrolled ? 'blur(20px)' : 'none',
+					borderBottom: scrolled ? 1 : 0,
+					borderColor: 'divider',
+				}}
+			>
+				<Container maxWidth="xl">
+					<Toolbar sx={{ px: { xs: 1, sm: 2 }, minHeight: 64 }}>
+						{/* Logo Section */}
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: { xs: 1, md: 0 } }}>
+							<Box
+								sx={{
+									p: 1.5,
+									borderRadius: 2,
+									color: 'primary.contrastText',
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+								}}
+							>
+								<ACELogo size="sm" />
+							</Box>
+						</Box>
+
+						{/* Desktop Navigation */}
+						<Box
+							sx={{
+								display: { xs: 'none', md: 'flex' },
+								alignItems: 'center',
+								gap: 1,
+								flexGrow: 1,
+								justifyContent: 'center',
+							}}
 						>
-							<div className="px-2 pt-2 pb-3 space-y-1 border-t border-border/50">
-								{navItems.map((item, index) => {
-									const getIcon = (iconName: string) => {
-										switch (iconName) {
-											case 'BarChart3':
-												return BarChart3;
-											case 'Plane':
-												return Plane;
-											case 'TrendingUp':
-												return TrendingUp;
-											case 'FileText':
-												return FileText;
-											case 'Activity':
-												return Activity;
-											default:
-												return FileText;
-										}
-									};
-									const IconComponent = getIcon(item.icon);
+							{navItems.map(item => {
+								const IconComponent = item.icon;
+								const isActive = pathname === item.href;
 
-									const isActive = pathname === item.href;
+								return (
+									<Link key={item.name} href={item.href} style={{ textDecoration: 'none' }}>
+										<Button
+											startIcon={<IconComponent />}
+											sx={{
+												bgcolor: isActive ? 'primary.main' : 'transparent',
+												color: isActive ? 'primary.contrastText' : 'text.secondary',
+												borderRadius: 2,
+												px: 2,
+												py: 1,
+												fontWeight: isActive ? 600 : 500,
+												'&:hover': {
+													bgcolor: isActive ? 'primary.dark' : 'action.hover',
+													transform: 'translateY(-1px)',
+												},
+												transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+												position: 'relative',
+											}}
+										>
+											{item.name}
+											{item.badge && (
+												<Chip
+													label={item.badge}
+													size="small"
+													color="success"
+													sx={{
+														ml: 1,
+														fontSize: '0.7rem',
+														height: 20,
+														bgcolor: isActive ? 'rgba(255,255,255,0.2)' : 'success.main',
+														color: isActive ? 'primary.contrastText' : 'success.contrastText',
+													}}
+												/>
+											)}
+										</Button>
+									</Link>
+								);
+							})}
+						</Box>
 
-									return (
-										<Link key={item.name} href={item.href} onClick={() => setIsOpen(false)}>
-											<motion.div
-												className={`flex items-center gap-3 px-3 py-3 text-base font-medium rounded-lg transition-all duration-200 focus-ring group ${
-													isActive
-														? 'text-primary bg-primary/10'
-														: 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-												}`}
-												initial={{ opacity: 0, x: -20 }}
-												animate={{ opacity: 1, x: 0 }}
-												transition={{ delay: index * 0.1 }}
-											>
-												<div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-													<IconComponent className="h-4 w-4 text-primary" />
-												</div>
-												<span>{item.name}</span>
-											</motion.div>
-										</Link>
-									);
-								})}
-								<div className="pt-4 border-t border-border/50">
-									<div className="flex items-center justify-between px-3 py-2">
-										<div className="flex items-center space-x-2">
-											<Bell className="h-4 w-4 text-muted-foreground" />
-											<span className="text-sm text-muted-foreground">Notifications</span>
-											<Badge className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-												3
-											</Badge>
-										</div>
-									</div>
-								</div>
-							</div>
-						</motion.div>
-					)}
-				</AnimatePresence>
-			</div>
-		</motion.nav>
+						{/* Right side actions */}
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+							<IconButton
+								onClick={toggleTheme}
+								sx={{
+									color: 'text.secondary',
+									'&:hover': {
+										bgcolor: 'action.hover',
+										color: 'primary.main',
+									},
+								}}
+							>
+								{isDark ? <LightModeIcon /> : <DarkModeIcon />}
+							</IconButton>
+
+							{/* Mobile menu button */}
+							<IconButton
+								color="inherit"
+								aria-label="open drawer"
+								edge="start"
+								onClick={handleDrawerToggle}
+								sx={{
+									display: { md: 'none' },
+									color: 'text.secondary',
+									'&:hover': {
+										bgcolor: 'action.hover',
+										color: 'primary.main',
+									},
+								}}
+							>
+								<MenuIcon />
+							</IconButton>
+						</Box>
+					</Toolbar>
+				</Container>
+			</AppBar>
+
+			{/* Mobile Drawer */}
+			<Drawer
+				variant="temporary"
+				open={mobileOpen}
+				onClose={handleDrawerToggle}
+				ModalProps={{
+					keepMounted: true, // Better open performance on mobile.
+				}}
+				sx={{
+					display: { xs: 'block', md: 'none' },
+					'& .MuiDrawer-paper': {
+						boxSizing: 'border-box',
+						width: 280,
+						bgcolor: 'background.paper',
+						borderRight: 1,
+						borderColor: 'divider',
+					},
+				}}
+			>
+				{drawer}
+			</Drawer>
+		</>
 	);
 }

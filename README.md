@@ -3,14 +3,17 @@
 🚀 **Advanced aircraft market evaluation and reporting platform with JetNet API integration**
 
 ## 🌐 Live Application
+
 **Production URL:** https://ace-aircraft-sales-v2.vercel.app
 
 ## 📋 Quick Setup Guide
 
 ### 1. Database Setup
+
 The application requires a PostgreSQL database. Choose one of these options:
 
 #### Option A: Vercel Postgres (Recommended)
+
 1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
 2. Select project: `ace-aircraft-sales-v2`
 3. Go to **Storage** tab
@@ -19,11 +22,13 @@ The application requires a PostgreSQL database. Choose one of these options:
 6. Copy the connection string
 
 #### Option B: External Providers
+
 - **Supabase** (free tier): https://supabase.com
-- **Railway** (simple setup): https://railway.app  
+- **Railway** (simple setup): https://railway.app
 - **Neon** (serverless): https://neon.tech
 
 ### 2. Environment Variables
+
 In your Vercel project settings, add these environment variables:
 
 ```bash
@@ -41,6 +46,7 @@ JETNET_PASSWORD=your_password
 ```
 
 ### 3. Database Migration
+
 After setting up the database, run:
 
 ```bash
@@ -57,6 +63,7 @@ npm run seed
 ## 🚀 Features
 
 ### ✨ Core Features
+
 - **Aircraft Market Evaluation** - Comprehensive market analysis
 - **Advanced Reporting** - Generate PDF, Excel, CSV, and HTML reports
 - **Real-time Data Sync** - JetNet API integration for live data
@@ -65,6 +72,7 @@ npm run seed
 - **Activity Tracking** - Complete audit trail of all operations
 
 ### 🔧 Technical Features
+
 - **Next.js 14** with App Router
 - **TypeScript** for type safety
 - **Prisma** ORM with PostgreSQL
@@ -76,6 +84,7 @@ npm run seed
 ## 📊 Data Management
 
 ### Aircraft Data
+
 - Comprehensive aircraft information
 - Market pricing analysis
 - Location and availability tracking
@@ -83,12 +92,14 @@ npm run seed
 - Serial numbers and registrations
 
 ### Market Analysis
+
 - Price trend analysis
 - Market value calculations
 - Comparative evaluations
 - Historical data tracking
 
 ### Reporting System
+
 - **PDF Reports** - Professional formatted reports
 - **Excel Export** - Spreadsheet-compatible data
 - **CSV Export** - Raw data for analysis
@@ -97,11 +108,13 @@ npm run seed
 ## 🛠️ Development
 
 ### Prerequisites
+
 - Node.js 18+
 - PostgreSQL database
 - Git
 
 ### Local Development
+
 ```bash
 # Clone the repository
 git clone https://github.com/chopkinz/ace-aircraft-sales-v2.git
@@ -125,6 +138,7 @@ npm run dev
 ```
 
 ### Available Scripts
+
 ```bash
 npm run dev          # Start development server
 npm run build        # Build for production
@@ -163,14 +177,17 @@ The application includes comprehensive JetNet API integration:
 - **Data Sync** - Automated data synchronization
 
 ### JetNet API Documentation
+
 See the `JetNetAPI/` folder for complete API documentation and examples.
 
 ## 🚀 Deployment
 
 ### Automatic Deployment
+
 The application is automatically deployed to Vercel when you push to the main branch.
 
 ### Manual Deployment
+
 ```bash
 # Build and deploy
 npm run build
@@ -178,6 +195,7 @@ vercel --prod
 ```
 
 ### Database Setup
+
 ```bash
 # Run the database setup script
 ./setup-database.sh
@@ -201,6 +219,7 @@ vercel --prod
 ## 📞 Support
 
 For issues or questions:
+
 1. Check the [Deployment Guide](DEPLOYMENT.md)
 2. Review the [JetNet API Documentation](JetNetAPI/)
 3. Check the troubleshooting section

@@ -46,19 +46,24 @@ export async function POST(req: NextRequest) {
 		try {
 			await prisma.syncLog.create({
 				data: {
+					syncType: 'jetnet-comprehensive',
 					status: 'COMPLETED',
 					startedAt: new Date(result.summary.startTime),
 					completedAt: new Date(result.summary.endTime),
 					recordsProcessed: result.count,
 					recordsCreated: result.summary.dataProcessed.databaseCreated,
 					recordsUpdated: result.summary.dataProcessed.databaseUpdated,
-					errorCount: result.summary.errorCount,
-					details: JSON.stringify({
-						workflowId: result.summary.workflowId,
-						duration: result.summary.totalDuration,
-						successRate: result.summary.successRate,
-						reportsGenerated: result.summary.reportsGenerated,
-					}),
+					// errorCount: result.summary.errorCount, // Commented out - property doesn't exist in schema
+					errorMessage: result.summary.errorMessage,
+					// details: JSON.stringify({
+					// 	error: String(error?.message || error),
+					// 	timestamp: new Date().toISOString(),
+					// }), // Commented out - property doesn't exist in schema
+					// 	workflowId: result.summary.workflowId,
+					// 	duration: result.summary.totalDuration,
+					// 	successRate: result.summary.successRate,
+					// 	reportsGenerated: result.summary.reportsGenerated,
+					// }), // Commented out - property doesn't exist in schema
 				},
 			});
 		} catch (logError) {
@@ -91,17 +96,18 @@ export async function POST(req: NextRequest) {
 		try {
 			await prisma.syncLog.create({
 				data: {
+					syncType: 'jetnet-comprehensive',
 					status: 'FAILED',
 					startedAt: new Date(),
 					completedAt: new Date(),
 					recordsProcessed: 0,
 					recordsCreated: 0,
 					recordsUpdated: 0,
-					errorCount: 1,
-					details: JSON.stringify({
-						error: String(error?.message || error),
-						timestamp: new Date().toISOString(),
-					}),
+					errorMessage: String(error instanceof Error ? error.message : error),
+					// details: JSON.stringify({
+					// 	error: String(error?.message || error),
+					// 	timestamp: new Date().toISOString(),
+					// }), // Commented out - property doesn't exist in schema
 				},
 			});
 		} catch (logError) {
@@ -159,7 +165,7 @@ export async function GET(req: NextRequest) {
 				recordsProcessed: sync.recordsProcessed,
 				recordsCreated: sync.recordsCreated,
 				recordsUpdated: sync.recordsUpdated,
-				errorCount: sync.errorCount,
+				// errorCount: sync.errorCount, // Commented out - property doesn't exist in schema
 				duration: sync.completedAt
 					? `${Math.round((sync.completedAt.getTime() - sync.startedAt.getTime()) / 1000)}s`
 					: 'In Progress',

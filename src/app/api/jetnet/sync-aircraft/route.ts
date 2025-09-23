@@ -129,34 +129,36 @@ export async function POST() {
 			},
 		});
 
-		const baseUrl = 'https://customer.jetnetconnect.com';
-
-		// Step 1: Authenticate with JetNet (exact N8N structure)
-		const authResponse = await fetch(`${baseUrl}/api/Admin/APILogin`, {
+		// Step 1: Authenticate with JetNet using the working auth route
+		const nextAuthUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+		const jetnetBaseUrl = 'https://customer.jetnetconnect.com';
+		const authResponse = await fetch(`${nextAuthUrl}/api/jetnet/auth`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				Accept: 'application/json',
-				'User-Agent': 'ACE-Aircraft-Sales/2.0',
 			},
 			body: JSON.stringify({
-				emailaddress: process.env.JETNET_EMAIL,
-				password: process.env.JETNET_PASSWORD,
+				emailaddress: process.env.JETNET_EMAIL || 'chase@theskylinebusinessgroup.com',
+				password: process.env.JETNET_PASSWORD || 'Smiley654!',
 			}),
 		});
-		console.log('authResponse', authResponse);
-		console.log('authResponse.ok', authResponse.ok);
-		console.log('authResponse.statusText', authResponse.statusText);
+
 		if (!authResponse.ok) {
 			throw new Error(`JetNet authentication failed: ${authResponse.statusText}`);
 		}
 
-		const authData = await authResponse.json();
-		const { bearerToken, apiToken, expiresIn } = authData;
-		console.log('authData', authData);
-		console.log('bearerToken', bearerToken);
-		console.log('apiToken', apiToken);	
-		console.log('expiresIn', expiresIn);
+		const authResult = await authResponse.json();
+		if (!authResult.success) {
+			throw new Error(
+				`JetNet authentication failed: ${authResult.error?.message || 'Unknown error'}`
+			);
+		}
+
+		const { bearerToken, apiToken } = authResult.data;
+		console.log('Authentication successful:', {
+			bearerToken: bearerToken ? '***' : 'missing',
+			apiToken: apiToken ? '***' : 'missing',
+		});
 		if (!bearerToken || String(bearerToken).length < 50) {
 			throw new Error('Invalid bearer token');
 		}
@@ -176,7 +178,7 @@ export async function POST() {
 			log.info(`Fetching JetNet aircraft data page ${page}`);
 
 			const aircraftResponse = await fetch(
-				`${baseUrl}/api/Aircraft/getBulkAircraftExport/${apiToken}`,
+				`${jetnetBaseUrl}/api/Aircraft/getBulkAircraftExport/${apiToken}`,
 				{
 					method: 'POST',
 					headers: {
@@ -329,7 +331,7 @@ export async function POST() {
 						aircraft.aircraftId as string,
 						apiToken,
 						bearerToken,
-						baseUrl
+						jetnetBaseUrl
 					);
 
 					// Calculate tech summary (from N8N workflow)

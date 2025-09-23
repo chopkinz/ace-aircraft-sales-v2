@@ -245,7 +245,7 @@ export function AdvancedDataTable({
 			case 'number':
 				return (
 					<span className="font-mono">
-						{typeof value === 'number' ? value.toLocaleString() : String(value || '')}
+						{typeof value === 'number' ? String(value) : String(value || '')}
 					</span>
 				);
 			case 'boolean':

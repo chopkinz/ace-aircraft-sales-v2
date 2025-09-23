@@ -1,26 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { LoadingSpinner } from '@/components/ui/loading';
-import Link from 'next/link';
-import { HelpTooltip } from '@/components/ui/help-tooltip';
-import { ExportDialog } from '@/components/ui/export-dialog';
+import React, { useState, useEffect } from 'react';
 import {
-	RefreshCw,
-	Plane,
-	Users,
-	DollarSign,
-	TrendingUp,
-	Database,
-	FileText,
-	Activity,
-	ArrowUpRight,
-	ArrowDownRight,
-	Download,
-} from 'lucide-react';
+	Container,
+	Grid,
+	Card,
+	CardContent,
+	CardHeader,
+	Typography,
+	Button,
+	Box,
+	Chip,
+	IconButton,
+	Tooltip,
+	LinearProgress,
+	Fade,
+	Grow,
+	useTheme,
+	Avatar,
+} from '@mui/material';
+import {
+	Refresh as RefreshIcon,
+	Flight as FlightIcon,
+	AttachMoney as DollarIcon,
+	TrendingUp as TrendingUpIcon,
+	Storage as DatabaseIcon,
+	Description as FileTextIcon,
+	Timeline as ActivityIcon,
+	ArrowUpward as ArrowUpIcon,
+	ArrowDownward as ArrowDownIcon,
+	Download as DownloadIcon,
+	Info as InfoIcon,
+	CheckCircle as CheckCircleIcon,
+} from '@mui/icons-material';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 interface DashboardStats {
@@ -42,13 +55,53 @@ export function Dashboard() {
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [syncing, setSyncing] = useState(false);
+	const theme = useTheme();
 
 	const fetchStats = async () => {
 		try {
-			const response = await fetch('/api/dashboard/stats');
+			// Try to get comprehensive stats from database
+			const response = await fetch('/api/database/aircraft/comprehensive?limit=10000');
 			const data = await response.json();
-			if (data.success) {
-				setStats(data.data);
+
+			if (data.success && data.data) {
+				const aircraft = data.data;
+				const totalAircraft = aircraft.length;
+				const forSaleAircraft = aircraft.filter(
+					(a: any) => a.status === 'ACTIVE' || a.status === 'For Sale' || a.forsale === 'Y'
+				).length;
+				const totalValue = aircraft.reduce(
+					(sum: number, a: any) => sum + (a.askingPrice || a.price || 0),
+					0
+				);
+				const averagePrice = totalAircraft > 0 ? totalValue / totalAircraft : 0;
+
+				// Get JetNet API status
+				const jetnetResponse = await fetch('/api/jetnet?action=test-auth');
+				const jetnetData = await jetnetResponse.json();
+
+				const statsData: DashboardStats = {
+					totalAircraft,
+					forSaleAircraft,
+					totalUsers: 0, // This would come from user management API
+					activeUsers: 0, // This would come from user management API
+					totalValue,
+					averagePrice,
+					activeListings: forSaleAircraft,
+					newThisMonth: 0, // This would be calculated from creation dates
+					soldThisMonth: 0, // This would be calculated from sale dates
+					lastSync: new Date().toISOString(),
+					lastSyncStatus: 'success',
+					jetnetApi: jetnetData.success || false,
+				};
+
+				setStats(statsData);
+			} else {
+				// Fallback to basic stats
+				const fallbackResponse = await fetch('/api/dashboard/stats');
+				const fallbackData = await fallbackResponse.json();
+				if (fallbackData.success) {
+					setStats(fallbackData.data);
+				}
 			}
 		} catch (error) {
 			console.error('Error fetching stats:', error);
@@ -99,14 +152,6 @@ export function Dashboard() {
 		loadData();
 	}, []);
 
-	if (loading) {
-		return (
-			<div className="flex items-center justify-center min-h-screen pt-16">
-				<LoadingSpinner variant="plane" size="lg" text="Loading Dashboard..." />
-			</div>
-		);
-	}
-
 	const formatCurrency = (amount: number) => {
 		return new Intl.NumberFormat('en-US', {
 			style: 'currency',
@@ -124,253 +169,349 @@ export function Dashboard() {
 		trend,
 		trendValue,
 		helpContent,
+		color = 'primary',
 	}: {
 		title: string;
 		value: string | number;
 		subtitle: string;
-		icon: React.ComponentType<{ className?: string }>;
+		icon: React.ComponentType;
 		trend?: 'up' | 'down';
 		trendValue?: string;
 		helpContent?: string;
+		color?: 'primary' | 'success' | 'warning' | 'error';
 	}) => (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.3 }}
-			className="hover-lift"
-		>
-			<Card className="modern-card">
-				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-					<div className="flex items-center gap-2">
-						<CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-						{helpContent && <HelpTooltip content={helpContent} />}
-					</div>
-					<motion.div
-						animate={{ rotate: [0, 10, -10, 0] }}
-						transition={{ duration: 2, repeat: Infinity }}
-					>
-						<Icon className="h-4 w-4 text-primary" />
-					</motion.div>
-				</CardHeader>
-				<CardContent>
-					<div className="text-2xl font-bold">{value}</div>
-					<div className="flex items-center gap-2 text-xs text-muted-foreground">
-						{trend && (
-							<motion.div
-								initial={{ scale: 0 }}
-								animate={{ scale: 1 }}
-								className={`flex items-center gap-1 ${
-									trend === 'up' ? 'text-green-600' : 'text-red-600'
-								}`}
-							>
-								{trend === 'up' ? (
-									<ArrowUpRight className="h-3 w-3" />
-								) : (
-									<ArrowDownRight className="h-3 w-3" />
-								)}
-								{trendValue}
-							</motion.div>
+		<Grow in={true} timeout={800}>
+			<Card
+				sx={{
+					height: '100%',
+					position: 'relative',
+					overflow: 'hidden',
+					'&:hover': {
+						transform: 'translateY(-4px)',
+						boxShadow: theme.shadows[8],
+					},
+					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+				}}
+			>
+				<CardHeader
+					sx={{
+						pb: 1,
+						'& .MuiCardHeader-content': {
+							display: 'flex',
+							alignItems: 'center',
+							gap: 1,
+						},
+					}}
+				>
+					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+						<Typography variant="body2" color="text.secondary" fontWeight={600}>
+							{title}
+						</Typography>
+						{helpContent && (
+							<Tooltip title={helpContent} arrow>
+								<IconButton size="small" sx={{ p: 0.5 }}>
+									<InfoIcon fontSize="small" />
+								</IconButton>
+							</Tooltip>
 						)}
-						<span>{subtitle}</span>
-					</div>
+					</Box>
+					<Avatar
+						sx={{
+							bgcolor: `${color}.main`,
+							color: `${color}.contrastText`,
+							width: 40,
+							height: 40,
+						}}
+					>
+						<Icon />
+					</Avatar>
+				</CardHeader>
+				<CardContent sx={{ pt: 0 }}>
+					<Typography variant="h4" fontWeight={700} gutterBottom>
+						{value}
+					</Typography>
+					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+						{trend && (
+							<Chip
+								icon={trend === 'up' ? <ArrowUpIcon /> : <ArrowDownIcon />}
+								label={trendValue}
+								size="small"
+								color={trend === 'up' ? 'success' : 'error'}
+								variant="outlined"
+								sx={{ fontSize: '0.75rem', height: 24 }}
+							/>
+						)}
+						<Typography variant="body2" color="text.secondary">
+							{subtitle}
+						</Typography>
+					</Box>
 				</CardContent>
 			</Card>
-		</motion.div>
+		</Grow>
 	);
 
-	return (
-		<div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-			<div className="container-responsive py-8 space-responsive">
-				{/* Enhanced Header */}
-				<motion.div
-					initial={{ opacity: 0, y: -20 }}
-					animate={{ opacity: 1, y: 0 }}
-					className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6"
+	const QuickAccessCard = ({
+		title,
+		description,
+		icon: Icon,
+		href,
+		color = 'primary',
+	}: {
+		title: string;
+		description: string;
+		icon: React.ComponentType;
+		href: string;
+		color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+	}) => (
+		<Grow in={true} timeout={1000}>
+			<Link href={href} style={{ textDecoration: 'none' }}>
+				<Card
+					sx={{
+						height: '100%',
+						cursor: 'pointer',
+						transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+						'&:hover': {
+							transform: 'translateY(-8px)',
+							boxShadow: theme.shadows[12],
+							'& .icon-container': {
+								transform: 'scale(1.1)',
+								bgcolor: `${color}.main`,
+								color: `${color}.contrastText`,
+							},
+						},
+					}}
 				>
-					<div className="space-y-3">
-						<div className="flex items-center gap-3 flex-wrap">
-							<h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-								ACE Aircraft Intelligence
-							</h1>
-							<HelpTooltip
-								content="Your comprehensive aviation market intelligence platform. Track aircraft listings, analyze market trends, and make informed decisions with real-time data from JetNet."
-								icon="info"
-							/>
-						</div>
-						<p className="text-muted-foreground text-lg sm:text-xl text-responsive">
-							Real-time aviation market intelligence platform
-						</p>
-						<div className="flex items-center gap-4 text-sm text-muted-foreground">
-							<span className="flex items-center gap-2">
-								<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-								Live Data
-							</span>
-							<span className="flex items-center gap-2">
-								<Database className="w-4 h-4" />
-								JetNet API
-							</span>
-						</div>
-					</div>
-					<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-						<ExportDialog data={[]} dataType="aircraft">
-							<motion.div
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								className="w-full sm:w-auto"
-							>
-								<Button variant="outline" className="focus-ring btn-touch w-full sm:w-auto">
-									<Download className="h-4 w-4 mr-2" />
-									Export Data
-									<HelpTooltip
-										content="Export aircraft data in CSV, Excel, or JSON format with custom field selection and filtering options."
-										icon="help"
-										className="ml-2"
-										asButton={false}
+					<CardContent sx={{ textAlign: 'center', p: 4 }}>
+						<Box
+							className="icon-container"
+							sx={{
+								width: 80,
+								height: 80,
+								borderRadius: '50%',
+								bgcolor: `${color}.light`,
+								color: `${color}.main`,
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								mx: 'auto',
+								mb: 3,
+								transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+							}}
+						>
+							<Icon />
+						</Box>
+						<Typography variant="h6" fontWeight={600} gutterBottom>
+							{title}
+						</Typography>
+						<Typography variant="body2" color="text.secondary">
+							{description}
+						</Typography>
+					</CardContent>
+				</Card>
+			</Link>
+		</Grow>
+	);
+
+	if (loading) {
+		return (
+			<Container maxWidth="xl" sx={{ py: 4 }}>
+				<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+					<LinearProgress sx={{ width: '100%', maxWidth: 400 }} />
+					<Typography variant="h6" color="text.secondary">
+						Loading Dashboard...
+					</Typography>
+				</Box>
+			</Container>
+		);
+	}
+
+	return (
+		<Box
+			sx={{
+				minHeight: '100vh',
+				background: `linear-gradient(135deg, ${theme.palette.background.default} 0%, ${theme.palette.primary.light}10 100%)`,
+				py: 4,
+			}}
+		>
+			<Container maxWidth="xl">
+				{/* Header Section */}
+				<Fade in={true} timeout={600}>
+					<Box sx={{ mb: 6 }}>
+						<Box
+							sx={{
+								display: 'flex',
+								flexDirection: { xs: 'column', lg: 'row' },
+								justifyContent: 'space-between',
+								alignItems: { xs: 'flex-start', lg: 'center' },
+								gap: 4,
+								mb: 4,
+							}}
+						>
+							<Box>
+								<Box
+									sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}
+								>
+									<Typography
+										variant="h3"
+										fontWeight={700}
+										sx={{
+											background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+											backgroundClip: 'text',
+											WebkitBackgroundClip: 'text',
+											WebkitTextFillColor: 'transparent',
+											fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+										}}
+									>
+										ACE Aircraft Intelligence
+									</Typography>
+									<Tooltip title="Your comprehensive aviation market intelligence platform" arrow>
+										<IconButton size="small">
+											<InfoIcon />
+										</IconButton>
+									</Tooltip>
+								</Box>
+								<Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+									Real-time aviation market intelligence platform
+								</Typography>
+								<Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+									<Chip
+										icon={<CheckCircleIcon />}
+										label="Live Data"
+										color="success"
+										variant="outlined"
+										size="small"
 									/>
-								</Button>
-							</motion.div>
-						</ExportDialog>
-						<motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-							<Button
-								onClick={syncWithJetNet}
-								disabled={syncing}
-								className="gradient-primary hover:opacity-90 transition-opacity focus-ring"
+									<Chip
+										icon={<DatabaseIcon />}
+										label="JetNet API"
+										color="primary"
+										variant="outlined"
+										size="small"
+									/>
+								</Box>
+							</Box>
+
+							<Box
+								sx={{
+									display: 'flex',
+									flexDirection: { xs: 'column', sm: 'row' },
+									gap: 2,
+									width: { xs: '100%', sm: 'auto' },
+								}}
 							>
-								<RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-								{syncing ? 'Syncing...' : 'Sync with JetNet'}
-								<HelpTooltip
-									content="Sync with JetNet to get the latest aircraft data, market updates, and pricing information. This process may take a few minutes."
-									icon="help"
-									className="ml-2"
-									asButton={false}
-								/>
-							</Button>
-						</motion.div>
-					</div>
-				</motion.div>
+								<Button variant="outlined" startIcon={<DownloadIcon />} sx={{ minWidth: 140 }}>
+									Export Data
+								</Button>
+								<Button
+									variant="contained"
+									startIcon={
+										<RefreshIcon sx={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
+									}
+									onClick={syncWithJetNet}
+									disabled={syncing}
+									sx={{
+										background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+										minWidth: 160,
+									}}
+								>
+									{syncing ? 'Syncing...' : 'Sync with JetNet'}
+								</Button>
+							</Box>
+						</Box>
+					</Box>
+				</Fade>
 
 				{/* Stats Grid */}
 				{stats && (
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						transition={{ delay: 0.2 }}
-						className="grid-responsive"
-					>
-						<StatCard
-							title="Total Aircraft"
-							value={stats.totalAircraft.toLocaleString()}
-							subtitle={`${stats.forSaleAircraft} available for sale`}
-							icon={Plane}
-							trend="up"
-							trendValue="+12%"
-							helpContent="Total number of aircraft in our database, including all aircraft regardless of sale status for comprehensive market analysis."
-						/>
-						<StatCard
-							title="Total Value"
-							value={formatCurrency(stats.totalValue)}
-							subtitle={`Avg: ${formatCurrency(stats.averagePrice)}`}
-							icon={DollarSign}
-							trend="up"
-							trendValue="+8%"
-							helpContent="Total market value of all aircraft listings. Average price helps identify market trends and pricing patterns."
-						/>
-						<StatCard
-							title="Active Users"
-							value={stats.activeUsers}
-							subtitle={`${stats.totalUsers} total users`}
-							icon={Users}
-							trend="up"
-							trendValue="+5%"
-							helpContent="Users currently active on the platform. Total users includes all registered accounts."
-						/>
-						<StatCard
-							title="Sync Status"
-							value={stats.jetnetApi ? 'Connected' : 'Disconnected'}
-							subtitle={`Last sync: ${
-								stats.lastSync ? new Date(stats.lastSync).toLocaleString() : 'Never'
-							}`}
-							icon={Database}
-							helpContent="Connection status with JetNet API. Green indicates active connection with recent data sync."
-						/>
-					</motion.div>
+					<Fade in={true} timeout={800}>
+						<Grid container spacing={3} sx={{ mb: 6 }}>
+							<Grid item xs={12} md={4}>
+								<StatCard
+									title="Total Aircraft"
+									value={stats.totalAircraft.toLocaleString()}
+									subtitle={`${stats.forSaleAircraft} available for sale`}
+									icon={FlightIcon}
+									trend="up"
+									trendValue="+12%"
+									helpContent="Total number of aircraft in our database, including all aircraft regardless of sale status for comprehensive market analysis."
+									color="primary"
+								/>
+							</Grid>
+							<Grid item xs={12} md={4}>
+								<StatCard
+									title="Total Value"
+									value={formatCurrency(stats.totalValue)}
+									subtitle={`Avg: ${formatCurrency(stats.averagePrice)}`}
+									icon={DollarIcon}
+									trend="up"
+									trendValue="+8%"
+									helpContent="Total market value of all aircraft listings. Average price helps identify market trends and pricing patterns."
+									color="success"
+								/>
+							</Grid>
+							<Grid item xs={12} md={4}>
+								<StatCard
+									title="Sync Status"
+									value={stats.jetnetApi ? 'Connected' : 'Disconnected'}
+									subtitle={`Last sync: ${
+										stats.lastSync ? new Date(stats.lastSync).toLocaleString() : 'Never'
+									}`}
+									icon={DatabaseIcon}
+									helpContent="Connection status with JetNet API. Green indicates active connection with recent data sync."
+									color={stats.jetnetApi ? 'success' : 'error'}
+								/>
+							</Grid>
+						</Grid>
+					</Fade>
 				)}
 
-				{/* Main Content Sections */}
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: 0.4 }}
-					className="space-y-8"
-				>
-					{/* Quick Access Cards */}
-					<div className="grid-responsive">
-						<Link href="/aircraft">
-							<Card className="card-modern-mobile group cursor-pointer hover-modern">
-								<CardHeader className="text-center space-y-4">
-									<div className="mx-auto p-4 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
-										<Plane className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-									</div>
-									<CardTitle className="text-lg sm:text-xl">Aircraft Database</CardTitle>
-								</CardHeader>
-								<CardContent className="text-center">
-									<p className="text-muted-foreground text-sm sm:text-base">
-										Browse and manage all aircraft listings with advanced filtering
-									</p>
-								</CardContent>
-							</Card>
-						</Link>
-
-						<Link href="/market">
-							<Card className="card-modern-mobile group cursor-pointer hover-modern">
-								<CardHeader className="text-center space-y-4">
-									<div className="mx-auto p-4 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
-										<TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-									</div>
-									<CardTitle className="text-lg sm:text-xl">Market Analysis</CardTitle>
-								</CardHeader>
-								<CardContent className="text-center">
-									<p className="text-muted-foreground text-sm sm:text-base">
-										Comprehensive market insights and trend analysis
-									</p>
-								</CardContent>
-							</Card>
-						</Link>
-
-						<Link href="/reports">
-							<Card className="card-modern-mobile group cursor-pointer hover-modern">
-								<CardHeader className="text-center space-y-4">
-									<div className="mx-auto p-4 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
-										<FileText className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-									</div>
-									<CardTitle className="text-lg sm:text-xl">Analytics & Reports</CardTitle>
-								</CardHeader>
-								<CardContent className="text-center">
-									<p className="text-muted-foreground text-sm sm:text-base">
-										Generate detailed reports and analytics
-									</p>
-								</CardContent>
-							</Card>
-						</Link>
-
-						<Link href="/activity">
-							<Card className="card-modern-mobile group cursor-pointer hover-modern">
-								<CardHeader className="text-center space-y-4">
-									<div className="mx-auto p-4 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
-										<Activity className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-									</div>
-									<CardTitle className="text-lg sm:text-xl">System Activity</CardTitle>
-								</CardHeader>
-								<CardContent className="text-center">
-									<p className="text-muted-foreground text-sm sm:text-base">
-										Monitor system activity and sync status
-									</p>
-								</CardContent>
-							</Card>
-						</Link>
-					</div>
-				</motion.div>
-			</div>
-		</div>
+				{/* Quick Access Cards */}
+				<Fade in={true} timeout={1000}>
+					<Box>
+						<Typography variant="h5" fontWeight={600} sx={{ mb: 3 }}>
+							Quick Access
+						</Typography>
+						<Grid container spacing={3}>
+							<Grid item xs={12} sm={6} md={3}>
+								<QuickAccessCard
+									title="Aircraft Database"
+									description="Browse and manage all aircraft listings with advanced filtering"
+									icon={FlightIcon}
+									href="/aircraft"
+									color="primary"
+								/>
+							</Grid>
+							<Grid item xs={12} sm={6} md={3}>
+								<QuickAccessCard
+									title="Market Analysis"
+									description="Comprehensive market insights and trend analysis"
+									icon={TrendingUpIcon}
+									href="/analytics"
+									color="success"
+								/>
+							</Grid>
+							<Grid item xs={12} sm={6} md={3}>
+								<QuickAccessCard
+									title="Analytics & Reports"
+									description="Generate detailed reports and analytics"
+									icon={FileTextIcon}
+									href="/reports"
+									color="warning"
+								/>
+							</Grid>
+							<Grid item xs={12} sm={6} md={3}>
+								<QuickAccessCard
+									title="System Activity"
+									description="Monitor system activity and sync status"
+									icon={ActivityIcon}
+									href="/logs"
+									color="error"
+								/>
+							</Grid>
+						</Grid>
+					</Box>
+				</Fade>
+			</Container>
+		</Box>
 	);
 }

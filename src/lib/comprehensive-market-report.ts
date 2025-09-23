@@ -1,7 +1,25 @@
 import { JetNetAPIClient } from '@/lib/jetnet-api-client';
 import fs from 'fs';
 import path from 'path';
-import { SearchParams } from '@/types';
+
+// Define SearchParams interface
+interface SearchParams {
+	forsale?: string;
+	basecountry?: string;
+	aircraftmake?: string;
+	yearmfr?: number;
+	yearlow?: number;
+	yearhigh?: number;
+	[key: string]: unknown;
+}
+
+// Define JetNetAPIResponse interface
+interface JetNetAPIResponse<T> {
+	success: boolean;
+	data: T[];
+	images?: string[];
+	error?: string;
+}
 
 export interface ComprehensiveReportConfig {
 	enableLogging?: boolean;
@@ -31,18 +49,18 @@ export interface ComprehensiveReportResult {
 	duration: number;
 	reportFile?: string;
 	outputDirectory: string;
-	datasets: Record<string, any>;
-	marketAnalysis?: any;
-	htmlReport?: any;
-	csvExports?: any[];
+	datasets: Record<string, unknown>;
+	marketAnalysis?: unknown;
+	htmlReport?: unknown;
+	csvExports?: unknown[];
 	error?: string;
 }
 
 export class ComprehensiveMarketReport {
 	private config: Required<ComprehensiveReportConfig>;
 	private client: JetNetAPIClient | null = null;
-	private reportData: Record<string, any> = {};
-	private marketAnalysis: any = null;
+	private reportData: Record<string, unknown> = {};
+	private marketAnalysis: unknown = null;
 
 	constructor(options: ComprehensiveReportConfig = {}, jetNetClient?: JetNetAPIClient) {
 		this.config = {
@@ -72,7 +90,7 @@ export class ComprehensiveMarketReport {
 		this.log('Comprehensive Market Report Generator initialized');
 	}
 
-	private log(message: string, data?: any) {
+	private log(message: string, data?: unknown) {
 		if (this.config.enableLogging) {
 			const timestamp = new Date().toISOString();
 			if (data) {
@@ -118,12 +136,12 @@ export class ComprehensiveMarketReport {
 				success: true,
 				totalAircraft,
 				duration,
-				reportFile: this.reportData.htmlReport?.filepath,
+				reportFile: (this.reportData.htmlReport as any)?.filepath,
 				outputDirectory: this.config.outputDir,
 				datasets: this.reportData,
 				marketAnalysis: this.marketAnalysis,
 				htmlReport: this.reportData.htmlReport,
-				csvExports: this.reportData.csvExports,
+				csvExports: this.reportData.csvExports as any,
 			};
 		} catch (error) {
 			const duration = Date.now() - startTime;
@@ -160,9 +178,12 @@ export class ComprehensiveMarketReport {
 		this.log('📊 Collecting comprehensive market data');
 
 		if (!this.client) {
-			this.log('❌ JetNet client not available. Using mock data for testing.');
-			await this.generateMockData();
-			return;
+			this.log(
+				'❌ JetNet client not available. Cannot generate comprehensive report without real data.'
+			);
+			throw new Error(
+				'JetNet client not available. Cannot generate comprehensive report without real data.'
+			);
 		}
 
 		const datasets = [
@@ -248,114 +269,61 @@ export class ComprehensiveMarketReport {
 		}
 	}
 
-	private async generateMockData() {
-		this.log('📊 Generating mock data for testing...');
+	// Mock data generation removed - production reports must use real JetNet data only
 
-		const mockDatasets = [
-			{
-				name: 'ALL_FOR_SALE',
-				displayName: 'All For Sale Aircraft',
-				count: 1250,
-			},
-			{
-				name: 'US_AIRCRAFT',
-				displayName: 'All US Aircraft',
-				count: 850,
-			},
-			{
-				name: 'GULFSTREAM_AIRCRAFT',
-				displayName: 'All Gulfstream Aircraft',
-				count: 45,
-			},
-			{
-				name: 'RECENT_AIRCRAFT',
-				displayName: '2020+ Aircraft',
-				count: 180,
-			},
-			{
-				name: 'MID_RANGE_AIRCRAFT',
-				displayName: '2015-2019 Aircraft',
-				count: 320,
-			},
-			{
-				name: 'VINTAGE_AIRCRAFT',
-				displayName: 'Pre-2010 Aircraft',
-				count: 750,
-			},
-		];
-
-		for (const dataset of mockDatasets) {
-			this.reportData[dataset.name] = {
-				displayName: dataset.displayName,
-				count: dataset.count,
-				data: {
-					success: true,
-					data: Array.from({ length: Math.min(dataset.count, 10) }, (_, i) => ({
-						AircraftID: `MOCK_${i + 1}`,
-						Make: 'GULFSTREAM',
-						Model: 'G550',
-						Year: 2015 + (i % 5),
-						AskingPrice: 15000000 + i * 500000,
-						TotalTime: 2000 + i * 100,
-						BaseCity: 'Los Angeles',
-						BaseState: 'CA',
-						BaseCountry: 'United States',
-					})),
-				},
-				duration: 100,
-				timestamp: new Date().toISOString(),
+	private cleanAircraftData(aircraft: unknown[]): unknown[] {
+		return aircraft.map(plane => {
+			const p = plane as any;
+			return {
+				aircraftid: p.AircraftID || p.aircraftid || '',
+				make: p.Make || p.make || '',
+				model: p.Model || p.model || '',
+				regnbr: p.Registration || p.regnbr || '',
+				yearmfr: p.Year || p.yearmfr || 0,
+				askingprice: p.Price || p.askingprice || 0,
+				forsale: p.ForSale || p.forsale || 'false',
+				basecity: p.BaseCity || p.basecity || '',
+				basestate: p.BaseState || p.basestate || '',
+				basecountry: p.BaseCountry || p.basecountry || '',
+				aftt: p.AFTT || p.aftt || 0,
+				engserial1: p.EngSerial1 || p.engserial1 || '',
+				engserial2: p.EngSerial2 || p.engserial2 || '',
+				icao: p.ICAO || p.icao || '',
+				exclusive: p.Exclusive || p.exclusive || 'false',
+				leased: p.Leased || p.leased || 'false',
+				listdate: p.ListDate || p.listdate || '',
+				pictures: [],
 			};
-
-			this.log(`✅ Mock data generated: ${dataset.displayName} (${dataset.count} records)`);
-		}
+		});
 	}
 
-	private cleanAircraftData(aircraft: any[]): any[] {
-		return aircraft.map(plane => ({
-			aircraftid: plane.AircraftID || plane.aircraftid || '',
-			make: plane.Make || plane.make || '',
-			model: plane.Model || plane.model || '',
-			regnbr: plane.Registration || plane.regnbr || '',
-			yearmfr: plane.Year || plane.yearmfr || 0,
-			askingprice: plane.Price || plane.askingprice || 0,
-			forsale: plane.ForSale || plane.forsale || 'false',
-			basecity: plane.BaseCity || plane.basecity || '',
-			basestate: plane.BaseState || plane.basestate || '',
-			basecountry: plane.BaseCountry || plane.basecountry || '',
-			aftt: plane.AFTT || plane.aftt || 0,
-			engserial1: plane.EngSerial1 || plane.engserial1 || '',
-			engserial2: plane.EngSerial2 || plane.engserial2 || '',
-			icao: plane.ICAO || plane.icao || '',
-			exclusive: plane.Exclusive || plane.exclusive || 'false',
-			leased: plane.Leased || plane.leased || 'false',
-			listdate: plane.ListDate || plane.listdate || '',
-			pictures: [],
-		}));
-	}
-
-	private async collectAircraftImages(aircraft: any[], datasetName: string) {
+	private async collectAircraftImages(aircraft: unknown[], datasetName: string) {
 		this.log(`🖼️  Collecting images for ${datasetName} (${aircraft.length} aircraft)`);
 
 		if (!this.client) {
 			this.log('⚠️  JetNet client not available, skipping image collection');
-			// Set placeholder images for all aircraft
-			aircraft.forEach(plane => {
-				plane.pictures = ['/images/placeholder-aircraft.jpg'];
-			});
+			// never set mock or placeholder images
+
 			return;
 		}
 
 		for (const plane of aircraft) {
 			try {
-				const picturesResult = await this.client.getAircraftImages(plane.aircraftid as string);
-				if (picturesResult.success && picturesResult.images.length > 0) {
-					plane.pictures = picturesResult.images;
+				const p = plane as Record<string, unknown>;
+				const picturesResult = await this.client.getAircraftImages(p.aircraftid as string);
+				if (
+					picturesResult.success &&
+					(picturesResult as any).images &&
+					(picturesResult as any).images.length > 0
+				) {
+					p.pictures = (picturesResult as any).images;
 				} else {
-					plane.pictures = ['/images/placeholder-aircraft.jpg'];
+					p.pictures = ['/images/placeholder-aircraft.jpg'];
 				}
 			} catch (error) {
-				this.log(`⚠️  Failed to get pictures for aircraft ${plane.aircraftid}:`, error);
-				plane.pictures = ['/images/placeholder-aircraft.jpg'];
+				const p = plane as Record<string, unknown>;
+				this.log(`⚠️  Failed to get pictures for aircraft ${p.aircraftid}:`, error);
+				p.pictures = ['/images/placeholder-aircraft.jpg'];
 			}
 		}
 	}
@@ -364,8 +332,11 @@ export class ComprehensiveMarketReport {
 		this.log('📈 Performing comprehensive market analysis');
 
 		const allAircraft = Object.values(this.reportData)
-			.filter((dataset: any) => dataset.data?.aircraft)
-			.flatMap((dataset: any) => dataset.data.aircraft);
+			.filter(
+				(dataset: unknown): dataset is Record<string, unknown> =>
+					typeof dataset === 'object' && dataset !== null && (dataset as any).data?.aircraft
+			)
+			.flatMap((dataset: Record<string, unknown>) => (dataset as any).data.aircraft);
 
 		if (allAircraft.length === 0) {
 			this.log('⚠️  No aircraft data available for analysis');
@@ -374,9 +345,9 @@ export class ComprehensiveMarketReport {
 
 		// Price analysis
 		const prices = allAircraft
-			.filter(plane => plane.askingprice > 0)
-			.map(plane => plane.askingprice)
-			.sort((a, b) => a - b);
+			.filter((plane: Record<string, unknown>) => (plane.askingprice as number) > 0)
+			.map((plane: Record<string, unknown>) => plane.askingprice as number)
+			.sort((a: number, b: number) => a - b);
 
 		const priceAnalysis = {
 			available: prices.length > 0,
@@ -391,9 +362,9 @@ export class ComprehensiveMarketReport {
 
 		// Year analysis
 		const years = allAircraft
-			.filter(plane => plane.yearmfr > 0)
-			.map(plane => plane.yearmfr)
-			.sort((a, b) => a - b);
+			.filter((plane: Record<string, unknown>) => (plane.yearmfr as number) > 0)
+			.map((plane: Record<string, unknown>) => plane.yearmfr as number)
+			.sort((a: number, b: number) => a - b);
 
 		const yearAnalysis = {
 			available: years.length > 0,
@@ -408,8 +379,8 @@ export class ComprehensiveMarketReport {
 
 		// Make analysis
 		const makeCounts = allAircraft.reduce(
-			(acc, plane) => {
-				const make = plane.make || 'Unknown';
+			(acc: Record<string, number>, plane: Record<string, unknown>) => {
+				const make = (plane.make as string) || 'Unknown';
 				acc[make] = (acc[make] || 0) + 1;
 				return acc;
 			},
@@ -428,8 +399,8 @@ export class ComprehensiveMarketReport {
 
 		// Geographic analysis
 		const stateCounts = allAircraft.reduce(
-			(acc, plane) => {
-				const state = plane.basestate || 'Unknown';
+			(acc: Record<string, number>, plane: Record<string, unknown>) => {
+				const state = (plane.basestate as string) || 'Unknown';
 				acc[state] = (acc[state] || 0) + 1;
 				return acc;
 			},
@@ -448,18 +419,28 @@ export class ComprehensiveMarketReport {
 
 		// Top opportunities (best value aircraft)
 		const opportunities = allAircraft
-			.filter(plane => plane.forsale === 'true' && plane.askingprice > 0 && plane.yearmfr > 0)
-			.map(plane => ({
+			.filter(
+				(plane: Record<string, unknown>) =>
+					plane.forsale === 'true' &&
+					(plane.askingprice as number) > 0 &&
+					(plane.yearmfr as number) > 0
+			)
+			.map((plane: Record<string, unknown>) => ({
 				...plane,
 				valueScore: this.calculateValueScore(plane),
 			}))
-			.sort((a, b) => (b as any).valueScore - (a as any).valueScore)
+			.sort(
+				(a: Record<string, unknown>, b: Record<string, unknown>) =>
+					(b.valueScore as number) - (a.valueScore as number)
+			)
 			.slice(0, 20);
 
 		this.marketAnalysis = {
 			summary: {
 				totalAircraft: allAircraft.length,
-				forSaleCount: allAircraft.filter(plane => plane.forsale === 'true').length,
+				forSaleCount: allAircraft.filter(
+					(plane: Record<string, unknown>) => plane.forsale === 'true'
+				).length,
 				uniqueMakes: Object.keys(makeCounts).length,
 				averagePrice: priceAnalysis.average,
 				averageYear: yearAnalysis.average,
@@ -475,27 +456,16 @@ export class ComprehensiveMarketReport {
 		this.log('✅ Market analysis completed');
 	}
 
-	private calculateValueScore(aircraft: any): number {
+	private calculateValueScore(aircraft: Record<string, unknown>): number {
 		// Simple value scoring algorithm
-		const yearScore =
-			aircraft.yearmfr > 2015
-				? 100
-				: aircraft.yearmfr > 2010
-					? 80
-					: aircraft.yearmfr > 2005
-						? 60
-						: 40;
+		const yearmfr = aircraft.yearmfr as number;
+		const askingprice = aircraft.askingprice as number;
+		const make = aircraft.make as string;
+
+		const yearScore = yearmfr > 2015 ? 100 : yearmfr > 2010 ? 80 : yearmfr > 2005 ? 60 : 40;
 		const priceScore =
-			aircraft.askingprice < 5000000
-				? 100
-				: aircraft.askingprice < 10000000
-					? 80
-					: aircraft.askingprice < 20000000
-						? 60
-						: 40;
-		const makeScore = ['GULFSTREAM', 'BOMBARDIER', 'CESSNA', 'DASSAULT'].includes(aircraft.make)
-			? 100
-			: 80;
+			askingprice < 5000000 ? 100 : askingprice < 10000000 ? 80 : askingprice < 20000000 ? 60 : 40;
+		const makeScore = ['GULFSTREAM', 'BOMBARDIER', 'CESSNA', 'DASSAULT'].includes(make) ? 100 : 80;
 
 		return (yearScore + priceScore + makeScore) / 3;
 	}
@@ -571,7 +541,9 @@ export class ComprehensiveMarketReport {
         <div class="footer">
             <p><strong>${this.config.branding}</strong></p>
             <div class="contact-info">
-                <p>${this.config.contactInfo.business.phone} | ${this.config.contactInfo.business.email}</p>
+                <p>${this.config.contactInfo.business.phone} | ${
+			this.config.contactInfo.business.email
+		}</p>
                 <p>${this.config.contactInfo.business.website}</p>
             </div>
         </div>
@@ -600,7 +572,9 @@ export class ComprehensiveMarketReport {
                 <div class="stat-label">Unique Makes</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">$${this.marketAnalysis?.priceAnalysis?.average?.toLocaleString() || 'N/A'}</div>
+                <div class="stat-number">$${
+									(this.marketAnalysis as any)?.priceAnalysis?.average?.toLocaleString() || 'N/A'
+								}</div>
                 <div class="stat-label">Average Price</div>
             </div>
         </div>`;
@@ -614,19 +588,27 @@ export class ComprehensiveMarketReport {
             <h2>Market Insights</h2>
             <div class="summary-stats">
                 <div class="stat-card">
-                    <div class="stat-number">${this.marketAnalysis.yearAnalysis?.average || 'N/A'}</div>
+                    <div class="stat-number">${
+											(this.marketAnalysis as any)?.yearAnalysis?.average || 'N/A'
+										}</div>
                     <div class="stat-label">Average Year</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">$${this.marketAnalysis.priceAnalysis?.min?.toLocaleString() || 'N/A'}</div>
+                    <div class="stat-number">$${
+											(this.marketAnalysis as any)?.priceAnalysis?.min?.toLocaleString() || 'N/A'
+										}</div>
                     <div class="stat-label">Lowest Price</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">$${this.marketAnalysis.priceAnalysis?.max?.toLocaleString() || 'N/A'}</div>
+                    <div class="stat-number">$${
+											(this.marketAnalysis as any).priceAnalysis?.max?.toLocaleString() || 'N/A'
+										}</div>
                     <div class="stat-label">Highest Price</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">${this.marketAnalysis.geographicAnalysis?.totalStates || 'N/A'}</div>
+                    <div class="stat-number">${
+											(this.marketAnalysis as any).geographicAnalysis?.totalStates || 'N/A'
+										}</div>
                     <div class="stat-label">States Represented</div>
                 </div>
             </div>
@@ -637,7 +619,7 @@ export class ComprehensiveMarketReport {
 		let html = '';
 
 		// Top Makes Table
-		if (this.marketAnalysis?.makeAnalysis?.topMakes) {
+		if ((this.marketAnalysis as any)?.makeAnalysis?.topMakes) {
 			html += `
             <div class="section">
                 <h2>Top Aircraft Makes</h2>
@@ -651,15 +633,20 @@ export class ComprehensiveMarketReport {
                     </thead>
                     <tbody>`;
 
-			this.marketAnalysis.makeAnalysis.topMakes.forEach(([make, count]: [string, number]) => {
-				const percentage = ((count / this.marketAnalysis.summary.totalAircraft) * 100).toFixed(1);
-				html += `
+			(this.marketAnalysis as any).makeAnalysis.topMakes.forEach(
+				([make, count]: [string, number]) => {
+					const percentage = (
+						(count / (this.marketAnalysis as any).summary.totalAircraft) *
+						100
+					).toFixed(1);
+					html += `
                         <tr>
                             <td>${make}</td>
                             <td>${count.toLocaleString()}</td>
                             <td>${percentage}%</td>
                         </tr>`;
-			});
+				}
+			);
 
 			html += `
                     </tbody>
@@ -668,7 +655,7 @@ export class ComprehensiveMarketReport {
 		}
 
 		// Top States Table
-		if (this.marketAnalysis?.geographicAnalysis?.topStates) {
+		if ((this.marketAnalysis as any)?.geographicAnalysis?.topStates) {
 			html += `
             <div class="section">
                 <h2>Top States by Aircraft Count</h2>
@@ -682,9 +669,12 @@ export class ComprehensiveMarketReport {
                     </thead>
                     <tbody>`;
 
-			this.marketAnalysis.geographicAnalysis.topStates.forEach(
+			(this.marketAnalysis as any).geographicAnalysis.topStates.forEach(
 				([state, count]: [string, number]) => {
-					const percentage = ((count / this.marketAnalysis.summary.totalAircraft) * 100).toFixed(1);
+					const percentage = (
+						(count / (this.marketAnalysis as any).summary.totalAircraft) *
+						100
+					).toFixed(1);
 					html += `
                         <tr>
                             <td>${state}</td>
@@ -724,10 +714,13 @@ export class ComprehensiveMarketReport {
 		this.log(`✅ Generated ${csvExports.length} CSV exports`);
 	}
 
-	private async exportAircraftData(): Promise<any> {
+	private async exportAircraftData(): Promise<Record<string, unknown> | null> {
 		const allAircraft = Object.values(this.reportData)
-			.filter((dataset: any) => dataset.data?.aircraft)
-			.flatMap((dataset: any) => dataset.data.aircraft);
+			.filter(
+				(dataset: unknown): dataset is Record<string, unknown> =>
+					typeof dataset === 'object' && dataset !== null && (dataset as any).data?.aircraft
+			)
+			.flatMap((dataset: Record<string, unknown>) => (dataset as any).data.aircraft);
 
 		if (allAircraft.length === 0) return null;
 
@@ -757,7 +750,7 @@ export class ComprehensiveMarketReport {
 
 		const csvContent = [
 			headers.join(','),
-			...allAircraft.map(plane =>
+			...allAircraft.map((plane: any) =>
 				[
 					plane.aircraftid,
 					plane.make,
@@ -777,7 +770,7 @@ export class ComprehensiveMarketReport {
 					plane.leased,
 					plane.listdate,
 				]
-					.map(field => `"${field}"`)
+					.map((field: unknown) => `"${field}"`)
 					.join(',')
 			),
 		].join('\n');
@@ -793,7 +786,7 @@ export class ComprehensiveMarketReport {
 		};
 	}
 
-	private async exportMarketAnalysis(): Promise<any> {
+	private async exportMarketAnalysis(): Promise<Record<string, unknown> | null> {
 		if (!this.marketAnalysis) return null;
 
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -802,17 +795,17 @@ export class ComprehensiveMarketReport {
 
 		const csvContent = [
 			'Metric,Value',
-			`Total Aircraft,${this.marketAnalysis.summary.totalAircraft}`,
-			`For Sale Count,${this.marketAnalysis.summary.forSaleCount}`,
-			`Unique Makes,${this.marketAnalysis.summary.uniqueMakes}`,
-			`Average Price,${this.marketAnalysis.priceAnalysis.average}`,
-			`Median Price,${this.marketAnalysis.priceAnalysis.median}`,
-			`Min Price,${this.marketAnalysis.priceAnalysis.min}`,
-			`Max Price,${this.marketAnalysis.priceAnalysis.max}`,
-			`Average Year,${this.marketAnalysis.yearAnalysis.average}`,
-			`Median Year,${this.marketAnalysis.yearAnalysis.median}`,
-			`Min Year,${this.marketAnalysis.yearAnalysis.min}`,
-			`Max Year,${this.marketAnalysis.yearAnalysis.max}`,
+			`Total Aircraft,${(this.marketAnalysis as any).summary.totalAircraft}`,
+			`For Sale Count,${(this.marketAnalysis as any).summary.forSaleCount}`,
+			`Unique Makes,${(this.marketAnalysis as any).summary.uniqueMakes}`,
+			`Average Price,${(this.marketAnalysis as any).priceAnalysis.average}`,
+			`Median Price,${(this.marketAnalysis as any).priceAnalysis.median}`,
+			`Min Price,${(this.marketAnalysis as any).priceAnalysis.min}`,
+			`Max Price,${(this.marketAnalysis as any).priceAnalysis.max}`,
+			`Average Year,${(this.marketAnalysis as any).yearAnalysis.average}`,
+			`Median Year,${(this.marketAnalysis as any).yearAnalysis.median}`,
+			`Min Year,${(this.marketAnalysis as any).yearAnalysis.min}`,
+			`Max Year,${(this.marketAnalysis as any).yearAnalysis.max}`,
 		].join('\n');
 
 		fs.writeFileSync(filepath, csvContent);
@@ -826,8 +819,8 @@ export class ComprehensiveMarketReport {
 		};
 	}
 
-	private async exportTopOpportunities(): Promise<any> {
-		if (!this.marketAnalysis?.topOpportunities) return null;
+	private async exportTopOpportunities(): Promise<Record<string, unknown> | null> {
+		if (!(this.marketAnalysis as any)?.topOpportunities) return null;
 
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 		const filename = `top-opportunities-${timestamp}.csv`;
@@ -848,7 +841,7 @@ export class ComprehensiveMarketReport {
 
 		const csvContent = [
 			headers.join(','),
-			...this.marketAnalysis.topOpportunities.map((plane: any) =>
+			...(this.marketAnalysis as any).topOpportunities.map((plane: any) =>
 				[
 					plane.aircraftid,
 					plane.make,
@@ -861,7 +854,7 @@ export class ComprehensiveMarketReport {
 					plane.basestate,
 					plane.basecountry,
 				]
-					.map(field => `"${field}"`)
+					.map((field: unknown) => `"${field}"`)
 					.join(',')
 			),
 		].join('\n');
@@ -872,7 +865,7 @@ export class ComprehensiveMarketReport {
 			filename,
 			filepath,
 			size: fs.statSync(filepath).size,
-			recordCount: this.marketAnalysis.topOpportunities.length,
+			recordCount: (this.marketAnalysis as any).topOpportunities.length,
 			generatedAt: new Date().toISOString(),
 		};
 	}
@@ -884,22 +877,34 @@ export class ComprehensiveMarketReport {
 
 	private getTotalAircraftCount(): number {
 		return Object.values(this.reportData)
-			.filter((dataset: any) => dataset.count && typeof dataset.count === 'number')
-			.reduce((sum: number, dataset: any) => sum + dataset.count, 0);
+			.filter(
+				(dataset: unknown): dataset is Record<string, unknown> =>
+					typeof dataset === 'object' &&
+					dataset !== null &&
+					(dataset as any).count &&
+					typeof (dataset as any).count === 'number'
+			)
+			.reduce((sum: number, dataset: Record<string, unknown>) => sum + (dataset as any).count, 0);
 	}
 
 	private getForSaleCount(): number {
 		return Object.values(this.reportData)
-			.filter((dataset: any) => dataset.data?.aircraft)
-			.flatMap((dataset: any) => dataset.data.aircraft)
+			.filter(
+				(dataset: unknown): dataset is Record<string, unknown> =>
+					typeof dataset === 'object' && dataset !== null && (dataset as any).data?.aircraft
+			)
+			.flatMap((dataset: Record<string, unknown>) => (dataset as any).data.aircraft)
 			.filter((plane: any) => plane.forsale === 'true').length;
 	}
 
 	private getUniqueMakesCount(): number {
-		const makes = new Set();
+		const makes = new Set<string>();
 		Object.values(this.reportData)
-			.filter((dataset: any) => dataset.data?.aircraft)
-			.flatMap((dataset: any) => dataset.data.aircraft)
+			.filter(
+				(dataset: unknown): dataset is Record<string, unknown> =>
+					typeof dataset === 'object' && dataset !== null && (dataset as any).data?.aircraft
+			)
+			.flatMap((dataset: Record<string, unknown>) => (dataset as any).data.aircraft)
 			.forEach((plane: any) => {
 				if (plane.make) makes.add(plane.make);
 			});

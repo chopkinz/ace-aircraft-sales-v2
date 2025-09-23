@@ -78,9 +78,9 @@ class JetNetSyncService {
 		try {
 			console.log('🚀 Starting JetNet aircraft sync...');
 
-			// Fetch bulk aircraft data from JetNet
+			// Fetch bulk aircraft data from JetNet - ALL aircraft
 			const jetnetResponse = await jetnetAPI.getBulkAircraftExport({
-				forsale: 'True',
+				forsale: 'All', // Get all aircraft, not just for sale
 				aircraftchanges: 'true',
 				showHistoricalAcRefs: true,
 				exactMatchReg: false,
@@ -88,11 +88,12 @@ class JetNetSyncService {
 				exactMatchMake: false,
 				exactMatchModel: false,
 				caseSensitive: false,
-				includeInactive: false,
+				includeInactive: true, // Include inactive aircraft
 				includeDeleted: false,
 			});
 
-			if (jetnetResponse.responsestatus !== 'SUCCESS') {
+			// Check if response is successful (JetNet returns "SUCCESS: ..." format)
+			if (!jetnetResponse.responsestatus || !jetnetResponse.responsestatus.includes('SUCCESS')) {
 				throw new Error(`JetNet API returned status: ${jetnetResponse.responsestatus}`);
 			}
 
@@ -200,11 +201,11 @@ class JetNetSyncService {
 							// Preserve some local data
 							createdAt: existingAircraft.createdAt,
 							// Update market data
-							marketData: {
+							marketData: JSON.stringify({
 								...existingAircraft.marketData,
 								lastJetNetSync: new Date().toISOString(),
-								jetNetData: aircraft.rawData,
-							},
+								jetNetData: aircraft,
+							}),
 						},
 					});
 					batchResult.updated++;
@@ -216,11 +217,11 @@ class JetNetSyncService {
 							createdAt: new Date(),
 							updatedAt: new Date(),
 							// Add market data
-							marketData: {
+							marketData: JSON.stringify({
 								lastJetNetSync: new Date().toISOString(),
-								jetNetData: aircraft.rawData,
+								jetNetData: aircraft,
 								dataSource: 'JetNet-BulkExport',
-							},
+							}),
 						},
 					});
 					batchResult.created++;

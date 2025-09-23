@@ -178,8 +178,8 @@ export class LargeScaleReportGenerator {
 		this.log('📊 Collecting large scale market data');
 
 		if (!this.client) {
-			this.log('❌ JetNet client not available. Using enhanced mock data for testing.');
-			await this.generateEnhancedMockData();
+			this.log('❌ JetNet client not available. Cannot generate reports without real data.');
+			throw new Error('JetNet API client is required for report generation');
 			return;
 		}
 
@@ -292,7 +292,9 @@ export class LargeScaleReportGenerator {
 					};
 
 					this.log(
-						`✅ SUCCESS! Collected ${cleanedAircraft.length} aircraft records (${this.reportData[dataset.name].collectionRate} of expected)`
+						`✅ SUCCESS! Collected ${cleanedAircraft.length} aircraft records (${
+							this.reportData[dataset.name].collectionRate
+						} of expected)`
 					);
 				} else {
 					this.log(`⚠️  No aircraft data returned for: ${dataset.displayName}`);
@@ -467,60 +469,7 @@ export class LargeScaleReportGenerator {
 		}
 	}
 
-	private async generateEnhancedMockData() {
-		this.log('📊 Generating enhanced mock data for large scale testing...');
-
-		const mockDatasets = [
-			{ name: 'ALL_FOR_SALE', displayName: 'All For Sale Aircraft', count: 5000 },
-			{ name: 'US_AIRCRAFT', displayName: 'All US Aircraft', count: 3000 },
-			{ name: 'GULFSTREAM_AIRCRAFT', displayName: 'All Gulfstream Aircraft', count: 200 },
-			{ name: 'CITATION_AIRCRAFT', displayName: 'All Citation Aircraft', count: 800 },
-			{ name: 'RECENT_AIRCRAFT', displayName: '2020+ Aircraft', count: 500 },
-			{ name: 'MID_RANGE_AIRCRAFT', displayName: '2015-2019 Aircraft', count: 1200 },
-			{ name: 'VINTAGE_AIRCRAFT', displayName: 'Pre-2010 Aircraft', count: 2000 },
-			{ name: 'LIGHT_JETS', displayName: 'Light Jets', count: 600 },
-			{ name: 'MID_SIZE_JETS', displayName: 'Mid-Size Jets', count: 400 },
-			{ name: 'HEAVY_JETS', displayName: 'Heavy Jets', count: 300 },
-		];
-
-		for (const dataset of mockDatasets) {
-			const sampleSize = Math.min(dataset.count, 50); // Generate sample data
-			const aircraftData = Array.from({ length: sampleSize }, (_, i) => ({
-				AircraftID: `MOCK_${dataset.name}_${i + 1}`,
-				Make: this.getRandomMake(),
-				Model: this.getRandomModel(),
-				Year: 2010 + (i % 14),
-				AskingPrice: this.getRandomPrice(),
-				TotalTime: 1000 + i * 50,
-				BaseCity: this.getRandomCity(),
-				BaseState: this.getRandomState(),
-				BaseCountry: 'United States',
-				ForSale: 'true',
-				AircraftCategory: this.getRandomCategory(),
-				EngineType: this.getRandomEngineType(),
-				MaxPassengers: this.getRandomPassengers(),
-				MaxRange: this.getRandomRange(),
-				CruiseSpeed: this.getRandomCruiseSpeed(),
-			}));
-
-			this.reportData[dataset.name] = {
-				displayName: dataset.displayName,
-				count: dataset.count,
-				data: {
-					success: true,
-					aircraft: aircraftData,
-				},
-				duration: 100,
-				timestamp: new Date().toISOString(),
-				expectedRecords: dataset.count,
-				collectionRate: '100%',
-			};
-
-			this.log(
-				`✅ Enhanced mock data generated: ${dataset.displayName} (${dataset.count} records, ${sampleSize} samples)`
-			);
-		}
-	}
+	// Mock data generation removed - only real JetNet API data is used
 
 	private getRandomMake(): string {
 		const makes = [
@@ -897,9 +846,15 @@ export class LargeScaleReportGenerator {
                         <span>Generated: ${dataset.timestamp}</span>
                     </div>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${parseFloat(dataset.collectionRate || '100')}%"></div>
+                        <div class="progress-fill" style="width: ${parseFloat(
+													dataset.collectionRate || '100'
+												)}%"></div>
                     </div>
-                    ${dataset.error ? `<p style="color: #dc3545; margin: 10px 0;">Error: ${dataset.error}</p>` : ''}
+                    ${
+											dataset.error
+												? `<p style="color: #dc3545; margin: 10px 0;">Error: ${dataset.error}</p>`
+												: ''
+										}
                 </div>
             `
 							)
@@ -908,7 +863,9 @@ export class LargeScaleReportGenerator {
 
         <div class="footer">
             <p>© ${new Date().getFullYear()} ${this.config.branding}. All rights reserved.</p>
-            <p>Contact: ${this.config.contactInfo.primary.email} | ${this.config.contactInfo.primary.phone}</p>
+            <p>Contact: ${this.config.contactInfo.primary.email} | ${
+			this.config.contactInfo.primary.phone
+		}</p>
         </div>
     </div>
 </body>

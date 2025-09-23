@@ -42,7 +42,7 @@ export interface JetNetAircraftData {
 	exclusive?: string;
 	leased?: string;
 	listdate?: string;
-	[key: string]: any;
+	[key: string]: unknown;
 }
 
 export interface JetNetBulkExportResponse {
@@ -78,6 +78,7 @@ class JetNetAPIService {
 		email: 'chase@theskylinebusinessgroup.com',
 		password: 'Smiley654!',
 	};
+	private userAgent = 'ACE-Aircraft-Sales/1.0';
 
 	private authCache: {
 		bearerToken?: string;
@@ -148,7 +149,9 @@ class JetNetAPIService {
 		} catch (error) {
 			console.error('JetNet authentication error:', error);
 			throw new Error(
-				`Failed to authenticate with JetNet: ${error instanceof Error ? error.message : 'Unknown error'}`
+				`Failed to authenticate with JetNet: ${
+					error instanceof Error ? error.message : 'Unknown error'
+				}`
 			);
 		}
 	}
@@ -159,7 +162,7 @@ class JetNetAPIService {
 	private async makeRequest<T>(
 		endpoint: string,
 		method: 'GET' | 'POST' = 'GET',
-		body?: any,
+		body?: Record<string, unknown>,
 		retries = 3
 	): Promise<T> {
 		const auth = await this.authenticate();
@@ -208,7 +211,7 @@ class JetNetAPIService {
 	): Promise<JetNetBulkExportResponse> {
 		// Default request parameters for comprehensive data
 		const defaultRequest: JetNetBulkExportRequest = {
-			forsale: 'True',
+			forsale: 'All', // Get all aircraft, not just for sale
 			aircraftchanges: 'true',
 			showHistoricalAcRefs: true,
 			exactMatchReg: false,
@@ -216,7 +219,7 @@ class JetNetAPIService {
 			exactMatchMake: false,
 			exactMatchModel: false,
 			caseSensitive: false,
-			includeInactive: false,
+			includeInactive: true, // Include inactive aircraft
 			includeDeleted: false,
 			...request,
 		};
@@ -225,7 +228,7 @@ class JetNetAPIService {
 			const data = await this.makeRequest<JetNetBulkExportResponse>(
 				'/api/Aircraft/getBulkAircraftExport/{{securityToken}}',
 				'POST',
-				defaultRequest
+				defaultRequest as Record<string, unknown>
 			);
 
 			// Handle different response formats
@@ -317,17 +320,20 @@ class JetNetAPIService {
 	/**
 	 * Get detailed aircraft status information
 	 */
-	async getAircraftStatus(aircraftId: string): Promise<any> {
+	async getAircraftStatus(aircraftId: string): Promise<Record<string, unknown>> {
 		console.log(`Fetching aircraft status for ${aircraftId}...`);
-		return this.makeRequest<any>(`/api/Aircraft/getStatus/${aircraftId}/{{securityToken}}`, 'GET');
+		return this.makeRequest<Record<string, unknown>>(
+			`/api/Aircraft/getStatus/${aircraftId}/{{securityToken}}`,
+			'GET'
+		);
 	}
 
 	/**
 	 * Get detailed aircraft airframe information
 	 */
-	async getAircraftAirframe(aircraftId: string): Promise<any> {
+	async getAircraftAirframe(aircraftId: string): Promise<Record<string, unknown>> {
 		console.log(`Fetching aircraft airframe for ${aircraftId}...`);
-		return this.makeRequest<any>(
+		return this.makeRequest<Record<string, unknown>>(
 			`/api/Aircraft/getAirframe/${aircraftId}/{{securityToken}}`,
 			'GET'
 		);
@@ -336,25 +342,31 @@ class JetNetAPIService {
 	/**
 	 * Get detailed aircraft engine information
 	 */
-	async getAircraftEngines(aircraftId: string): Promise<any> {
+	async getAircraftEngines(aircraftId: string): Promise<Record<string, unknown>> {
 		console.log(`Fetching aircraft engines for ${aircraftId}...`);
-		return this.makeRequest<any>(`/api/Aircraft/getEngine/${aircraftId}/{{securityToken}}`, 'GET');
+		return this.makeRequest<Record<string, unknown>>(
+			`/api/Aircraft/getEngine/${aircraftId}/{{securityToken}}`,
+			'GET'
+		);
 	}
 
 	/**
 	 * Get detailed aircraft APU information
 	 */
-	async getAircraftAPU(aircraftId: string): Promise<any> {
+	async getAircraftAPU(aircraftId: string): Promise<Record<string, unknown>> {
 		console.log(`Fetching aircraft APU for ${aircraftId}...`);
-		return this.makeRequest<any>(`/api/Aircraft/getApu/${aircraftId}/{{securityToken}}`, 'GET');
+		return this.makeRequest<Record<string, unknown>>(
+			`/api/Aircraft/getApu/${aircraftId}/{{securityToken}}`,
+			'GET'
+		);
 	}
 
 	/**
 	 * Get detailed aircraft avionics information
 	 */
-	async getAircraftAvionics(aircraftId: string): Promise<any> {
+	async getAircraftAvionics(aircraftId: string): Promise<Record<string, unknown>> {
 		console.log(`Fetching aircraft avionics for ${aircraftId}...`);
-		return this.makeRequest<any>(
+		return this.makeRequest<Record<string, unknown>>(
 			`/api/Aircraft/getAvionics/${aircraftId}/{{securityToken}}`,
 			'GET'
 		);
@@ -363,9 +375,9 @@ class JetNetAPIService {
 	/**
 	 * Get detailed aircraft additional equipment information
 	 */
-	async getAircraftAdditionalEquipment(aircraftId: string): Promise<any> {
+	async getAircraftAdditionalEquipment(aircraftId: string): Promise<Record<string, unknown>> {
 		console.log(`Fetching aircraft additional equipment for ${aircraftId}...`);
-		return this.makeRequest<any>(
+		return this.makeRequest<Record<string, unknown>>(
 			`/api/Aircraft/getAdditionalEquipment/${aircraftId}/{{securityToken}}`,
 			'GET'
 		);
@@ -374,9 +386,9 @@ class JetNetAPIService {
 	/**
 	 * Get detailed aircraft interior information
 	 */
-	async getAircraftInterior(aircraftId: string): Promise<any> {
+	async getAircraftInterior(aircraftId: string): Promise<Record<string, unknown>> {
 		console.log(`Fetching aircraft interior for ${aircraftId}...`);
-		return this.makeRequest<any>(
+		return this.makeRequest<Record<string, unknown>>(
 			`/api/Aircraft/getInterior/${aircraftId}/{{securityToken}}`,
 			'GET'
 		);
@@ -385,9 +397,9 @@ class JetNetAPIService {
 	/**
 	 * Get detailed aircraft exterior information
 	 */
-	async getAircraftExterior(aircraftId: string): Promise<any> {
+	async getAircraftExterior(aircraftId: string): Promise<Record<string, unknown>> {
 		console.log(`Fetching aircraft exterior for ${aircraftId}...`);
-		return this.makeRequest<any>(
+		return this.makeRequest<Record<string, unknown>>(
 			`/api/Aircraft/getExterior/${aircraftId}/{{securityToken}}`,
 			'GET'
 		);
@@ -396,9 +408,9 @@ class JetNetAPIService {
 	/**
 	 * Get detailed aircraft maintenance information
 	 */
-	async getAircraftMaintenance(aircraftId: string): Promise<any> {
+	async getAircraftMaintenance(aircraftId: string): Promise<Record<string, unknown>> {
 		console.log(`Fetching aircraft maintenance for ${aircraftId}...`);
-		return this.makeRequest<any>(
+		return this.makeRequest<Record<string, unknown>>(
 			`/api/Aircraft/getMaintenance/${aircraftId}/{{securityToken}}`,
 			'GET'
 		);
@@ -407,9 +419,9 @@ class JetNetAPIService {
 	/**
 	 * Get detailed aircraft company relationships information
 	 */
-	async getAircraftCompanyRelationships(aircraftId: string): Promise<any> {
+	async getAircraftCompanyRelationships(aircraftId: string): Promise<Record<string, unknown>> {
 		console.log(`Fetching aircraft company relationships for ${aircraftId}...`);
-		return this.makeRequest<any>(
+		return this.makeRequest<Record<string, unknown>>(
 			`/api/Aircraft/getCompanyrelationships/${aircraftId}/{{securityToken}}`,
 			'GET'
 		);
@@ -418,33 +430,37 @@ class JetNetAPIService {
 	/**
 	 * Get aircraft features
 	 */
-	async getAircraftFeatures(aircraftId: string): Promise<any> {
-		return this.makeRequest<any>(`/api/Aircraft/getFeatures/${aircraftId}/{{securityToken}}`);
+	async getAircraftFeatures(aircraftId: string): Promise<Record<string, unknown>> {
+		return this.makeRequest<Record<string, unknown>>(
+			`/api/Aircraft/getFeatures/${aircraftId}/{{securityToken}}`
+		);
 	}
 
 	/**
 	 * Get aircraft pictures/images
 	 */
-	async getAircraftPictures(aircraftId: string): Promise<any> {
-		return this.makeRequest<any>(`/api/Aircraft/getPictures/${aircraftId}/{{securityToken}}`);
+	async getAircraftPictures(aircraftId: string): Promise<Record<string, unknown>> {
+		return this.makeRequest<Record<string, unknown>>(
+			`/api/Aircraft/getPictures/${aircraftId}/{{securityToken}}`
+		);
 	}
 
 	/**
 	 * Get comprehensive aircraft details including all subsystems
 	 */
 	async getAircraftComprehensiveDetails(aircraftId: string): Promise<{
-		status: any;
-		airframe: any;
-		engines: any;
-		apu: any;
-		avionics: any;
-		features: any;
-		additionalEquipment: any;
-		interior: any;
-		exterior: any;
-		maintenance: any;
-		companyRelationships: any;
-		pictures: any;
+		status: Record<string, unknown>;
+		airframe: Record<string, unknown>;
+		engines: Record<string, unknown>;
+		apu: Record<string, unknown>;
+		avionics: Record<string, unknown>;
+		features: Record<string, unknown>;
+		additionalEquipment: Record<string, unknown>;
+		interior: Record<string, unknown>;
+		exterior: Record<string, unknown>;
+		maintenance: Record<string, unknown>;
+		companyRelationships: Record<string, unknown>;
+		pictures: Record<string, unknown>;
 	}> {
 		console.log(`Fetching comprehensive aircraft details for ${aircraftId}...`);
 
@@ -511,59 +527,36 @@ class JetNetAPIService {
 			model: aircraft.model || 'Unknown',
 			year: aircraft.yearmfr || aircraft.yeardlv || aircraft.yeardelivered || null,
 			yearManufactured: aircraft.yearmfr || null,
-			yearDelivered: aircraft.yeardlv || null,
 
 			// Registration and serial
 			registration: aircraft.regnbr || '',
 			serialNumber: aircraft.sernbr || '',
 
 			// Pricing
-			price: aircraft.askingprice || aircraft.asking || null,
-			askingPrice: aircraft.askingprice || null,
+			price: aircraft.askingprice
+				? parseFloat(aircraft.askingprice.toString())
+				: aircraft.asking
+				? parseFloat(aircraft.asking.toString())
+				: null,
+			askingPrice: aircraft.askingprice ? parseFloat(aircraft.askingprice.toString()) : null,
 			currency: 'USD',
 
 			// Location and base
 			location: aircraft.basecity || aircraft.acbasecity || aircraft.acbasename || '',
-			baseCity: aircraft.basecity || '',
-			baseState: aircraft.basestate || '',
-			baseCountry: aircraft.basecountry || '',
-			baseAirportId: aircraft.baseairportid || '',
-			baseIcaoCode: aircraft.baseicaocode || '',
-			baseIataCode: aircraft.baseiata || '',
 
 			// Flight hours
-			totalTime: aircraft.aftt || aircraft.achours || null,
-			totalTimeHours: aircraft.aftt ? parseFloat(aircraft.aftt) : null,
-			estimatedAftt: aircraft.estaftt || null,
-
-			// Engine information
-			engineSn1: aircraft.enginesn1 || '',
-			engineSn2: aircraft.enginesn2 || '',
-
-			// Aircraft specifications
-			avionics: aircraft.acavionics || '',
-			passengers: aircraft.acpassengers || '',
-			photos: aircraft.acphotos || '',
-			notes: aircraft.acnotes || '',
+			totalTimeHours: aircraft.aftt ? parseFloat(aircraft.aftt.toString()) : null,
 
 			// Market status
-			forsale: aircraft.forsale === 'Y' || aircraft.forsale === 'True' || aircraft.forsale === true,
-			marketStatus: aircraft.marketstatus || '',
-			exclusive: aircraft.exclusive || '',
-			leased: aircraft.leased || '',
+			forSale: aircraft.forsale === 'Y' || aircraft.forsale === 'True' || aircraft.forsale === true,
 
 			// Dates
-			listDate: aircraft.listdate ? new Date(aircraft.listdate) : null,
+			dateListed: aircraft.listdate ? new Date(aircraft.listdate) : null,
 
 			// Status
 			status: aircraft.forsale === 'Y' || aircraft.forsale === 'True' ? 'AVAILABLE' : 'SOLD',
 
-			// Store all original data for flexibility
-			rawData: aircraft,
-
-			// Processing metadata
-			processedAt: new Date().toISOString(),
-			dataSource: 'JetNet-BulkExport',
+			// Processing metadata - these fields are not in the Prisma schema
 		}));
 	}
 
@@ -600,7 +593,9 @@ class JetNetAPIService {
 		} catch (error) {
 			console.error('JetNet model intelligence error:', error);
 			throw new Error(
-				`Failed to fetch model intelligence: ${error instanceof Error ? error.message : 'Unknown error'}`
+				`Failed to fetch model intelligence: ${
+					error instanceof Error ? error.message : 'Unknown error'
+				}`
 			);
 		}
 	}
@@ -646,7 +641,9 @@ class JetNetAPIService {
 		} catch (error) {
 			console.error('JetNet model market trends error:', error);
 			throw new Error(
-				`Failed to fetch model market trends: ${error instanceof Error ? error.message : 'Unknown error'}`
+				`Failed to fetch model market trends: ${
+					error instanceof Error ? error.message : 'Unknown error'
+				}`
 			);
 		}
 	}

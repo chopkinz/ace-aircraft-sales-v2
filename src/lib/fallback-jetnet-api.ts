@@ -1,6 +1,6 @@
 /**
  * Fallback JetNet API Client
- * Uses mock data when webhook authentication fails
+ * Provides error handling when JetNet API is unavailable
  */
 
 import { JetNetAPIResponse, SearchParams } from './jetnet-api-client';
@@ -29,14 +29,12 @@ export interface MockAircraft {
 }
 
 export class FallbackJetNetAPIClient {
-	private mockData: MockAircraft[] = [];
-
 	constructor() {
-		this.generateMockData();
+		// No mock data generation - only real JetNet API calls
 	}
 
 	private generateMockData(): void {
-		const makes = [
+		const makes: string[] = [
 			'GULFSTREAM',
 			'CESSNA',
 			'BOMBARDIER',
@@ -46,7 +44,7 @@ export class FallbackJetNetAPIClient {
 			'HAWKER',
 			'PILATUS',
 		];
-		const models = {
+		const models: Record<string, string[]> = {
 			GULFSTREAM: ['G650', 'G550', 'G450', 'G350', 'G280'],
 			CESSNA: [
 				'Citation X',
@@ -108,116 +106,36 @@ export class FallbackJetNetAPIClient {
 	}
 
 	async searchAircraft(params: SearchParams = {}): Promise<JetNetAPIResponse> {
-		console.log('🔍 Using fallback mock data for aircraft search:', params);
+		console.log('❌ JetNet API unavailable - no fallback data available');
 
-		try {
-			let filteredData = [...this.mockData];
-
-			// Apply filters
-			if (params.aircraftmake) {
-				filteredData = filteredData.filter(aircraft =>
-					aircraft.aircraftMake.toLowerCase().includes(params.aircraftmake.toLowerCase())
-				);
-			}
-
-			if (params.aircraftmodel) {
-				filteredData = filteredData.filter(aircraft =>
-					aircraft.aircraftModel.toLowerCase().includes(params.aircraftmodel.toLowerCase())
-				);
-			}
-
-			if (params.basecountry) {
-				filteredData = filteredData.filter(aircraft =>
-					aircraft.baseCountry.toLowerCase().includes(params.basecountry.toLowerCase())
-				);
-			}
-
-			if (params.basestate) {
-				filteredData = filteredData.filter(aircraft =>
-					aircraft.baseState.toLowerCase().includes(params.basestate.toLowerCase())
-				);
-			}
-
-			if (params.yearFrom) {
-				filteredData = filteredData.filter(aircraft => aircraft.yearMfr >= params.yearFrom);
-			}
-
-			if (params.yearTo) {
-				filteredData = filteredData.filter(aircraft => aircraft.yearMfr <= params.yearTo);
-			}
-
-			if (params.pricelow) {
-				filteredData = filteredData.filter(aircraft => aircraft.price >= params.pricelow);
-			}
-
-			if (params.pricehigh) {
-				filteredData = filteredData.filter(aircraft => aircraft.price <= params.pricehigh);
-			}
-
-			if (params.forsale !== undefined) {
-				const forSale = params.forsale === 'true' || params.forsale === true;
-				filteredData = filteredData.filter(aircraft => aircraft.forSale === forSale);
-			}
-
-			// Pagination
-			const page = params.page || 1;
-			const limit = params.limit || 20;
-			const offset = (page - 1) * limit;
-
-			const paginatedData = filteredData.slice(offset, offset + limit);
-
-			return {
-				success: true,
-				data: paginatedData,
-				pagination: {
-					total: filteredData.length,
-					limit,
-					offset,
-					hasMore: offset + limit < filteredData.length,
-				},
-			};
-		} catch (error) {
-			console.error('❌ Mock data search failed:', error);
-			return {
-				success: false,
-				error: error instanceof Error ? error.message : 'Unknown error',
-			};
-		}
+		// Return empty response when JetNet API is unavailable
+		return {
+			success: false,
+			error: 'JetNet API is currently unavailable. Please try again later.',
+			data: [],
+			total: 0,
+			page: 1,
+			limit: 0,
+		};
 	}
 
 	async getAircraftMakes(): Promise<string[]> {
-		const makes = [...new Set(this.mockData.map(aircraft => aircraft.aircraftMake))];
-		return makes.sort();
+		console.log('❌ JetNet API unavailable - no aircraft makes available');
+		return [];
 	}
 
 	async getAircraftModels(make?: string): Promise<string[]> {
-		let models = this.mockData.map(aircraft => aircraft.aircraftModel);
-
-		if (make) {
-			models = this.mockData
-				.filter(aircraft => aircraft.aircraftMake.toLowerCase() === make.toLowerCase())
-				.map(aircraft => aircraft.aircraftModel);
-		}
-
-		const uniqueModels = [...new Set(models)];
-		return uniqueModels.sort();
+		console.log('❌ JetNet API unavailable - no aircraft models available');
+		return [];
 	}
 
 	async getStates(country?: string): Promise<string[]> {
-		let states = this.mockData.map(aircraft => aircraft.baseState);
-
-		if (country) {
-			states = this.mockData
-				.filter(aircraft => aircraft.baseCountry.toLowerCase() === country.toLowerCase())
-				.map(aircraft => aircraft.baseState);
-		}
-
-		const uniqueStates = [...new Set(states)];
-		return uniqueStates.sort();
+		console.log('❌ JetNet API unavailable - no states available');
+		return [];
 	}
 
 	async getCountries(): Promise<string[]> {
-		const countries = [...new Set(this.mockData.map(aircraft => aircraft.baseCountry))];
-		return countries.sort();
+		console.log('❌ JetNet API unavailable - no countries available');
+		return [];
 	}
 }

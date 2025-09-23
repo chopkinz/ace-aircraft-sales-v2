@@ -1,9 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import NextImage from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
 	Plane,
 	Wrench,
@@ -29,6 +31,20 @@ import {
 	Zap,
 	Activity,
 	ArrowUpRight,
+	Code,
+	Eye,
+	Table,
+	Grid3X3,
+	Download,
+	Camera,
+	Monitor,
+	Headphones,
+	Navigation,
+	Radar,
+	Wifi,
+	Bluetooth,
+	Battery,
+	Power,
 } from 'lucide-react';
 
 interface DataFormatterProps {
@@ -115,6 +131,45 @@ const renderValue = (value: unknown): React.ReactNode => {
 				</div>
 			);
 		}
+		// Check if it's an image URL
+		if (
+			value.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i) ||
+			value.includes('image') ||
+			value.includes('photo')
+		) {
+			return (
+				<div className="space-y-2">
+					<div className="flex items-center gap-2">
+						<NextImage src={value} alt="Aircraft image" className="h-3 w-3 text-muted-foreground" />
+						<span className="text-sm font-medium">Image</span>
+					</div>
+					<div className="relative group">
+						<div className="w-full max-w-xs h-32 relative rounded-lg border border-border/30 hover:border-border/60 transition-colors cursor-pointer overflow-hidden">
+							<NextImage
+								src={value}
+								alt="Aircraft image"
+								fill
+								className="object-cover"
+								onError={() => {
+									// Handle error by showing placeholder
+								}}
+							/>
+						</div>
+						<div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+							<Button
+								variant="secondary"
+								size="sm"
+								onClick={() => window.open(value, '_blank')}
+								className="h-8 px-3 text-xs"
+							>
+								<ArrowUpRight className="h-3 w-3 mr-1" />
+								View Full Size
+							</Button>
+						</div>
+					</div>
+				</div>
+			);
+		}
 		// Check if it's a URL
 		if (value.startsWith('http')) {
 			return (
@@ -165,6 +220,55 @@ const renderValue = (value: unknown): React.ReactNode => {
 				</span>
 			);
 		}
+
+		// Check if it's an array of image URLs
+		const isImageArray = value.every(
+			item =>
+				typeof item === 'string' &&
+				(item.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i) ||
+					item.includes('image') ||
+					item.includes('photo'))
+		);
+
+		if (isImageArray) {
+			return (
+				<div className="space-y-3">
+					<div className="flex items-center gap-2">
+						<Badge variant="secondary" className="text-xs">
+							{value.length} images
+						</Badge>
+					</div>
+					<div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+						{value.map((imageUrl, index) => (
+							<div key={index} className="relative group">
+								<div className="w-full h-24 relative rounded-lg border border-border/30 hover:border-border/60 transition-colors cursor-pointer overflow-hidden">
+									<NextImage
+										src={imageUrl}
+										alt={`Aircraft image ${index + 1}`}
+										fill
+										className="object-cover"
+										onError={() => {
+											// Handle error by showing placeholder
+										}}
+									/>
+								</div>
+								<div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+									<Button
+										variant="secondary"
+										size="sm"
+										onClick={() => window.open(imageUrl, '_blank')}
+										className="h-6 px-2 text-xs"
+									>
+										<ArrowUpRight className="h-3 w-3" />
+									</Button>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			);
+		}
+
 		return (
 			<div className="space-y-2">
 				<div className="flex items-center gap-2">
@@ -262,16 +366,116 @@ const getIconForField = (fieldName: string): React.ReactNode => {
 		avionics: <Radio className="h-4 w-4" />,
 		passengers: <Users className="h-4 w-4" />,
 
+		// Images and Media
+		images: <Camera className="h-4 w-4" />,
+		photos: <Camera className="h-4 w-4" />,
+		image: <Camera className="h-4 w-4" />,
+		photo: <Camera className="h-4 w-4" />,
+		thumbnail: <Camera className="h-4 w-4" />,
+		exterior: <Camera className="h-4 w-4" />,
+		interior: <Camera className="h-4 w-4" />,
+
+		// Avionics and Electronics
+		avionicsSuite: <Monitor className="h-4 w-4" />,
+		autopilot: <Navigation className="h-4 w-4" />,
+		gps: <Navigation className="h-4 w-4" />,
+		radar: <Radar className="h-4 w-4" />,
+		transponder: <Radio className="h-4 w-4" />,
+		radio: <Radio className="h-4 w-4" />,
+		com: <Radio className="h-4 w-4" />,
+		nav: <Navigation className="h-4 w-4" />,
+		adf: <Navigation className="h-4 w-4" />,
+		vor: <Navigation className="h-4 w-4" />,
+		ils: <Navigation className="h-4 w-4" />,
+		weather: <Radar className="h-4 w-4" />,
+		tcas: <Radar className="h-4 w-4" />,
+		adsb: <Radio className="h-4 w-4" />,
+		efis: <Monitor className="h-4 w-4" />,
+		pfd: <Monitor className="h-4 w-4" />,
+		mfd: <Monitor className="h-4 w-4" />,
+		audio: <Headphones className="h-4 w-4" />,
+		intercom: <Headphones className="h-4 w-4" />,
+		bluetooth: <Bluetooth className="h-4 w-4" />,
+		wifi: <Wifi className="h-4 w-4" />,
+		power: <Power className="h-4 w-4" />,
+		battery: <Battery className="h-4 w-4" />,
+
 		// Market
 		marketStatus: <TrendingUp className="h-4 w-4" />,
 		exclusive: <Star className="h-4 w-4" />,
 		leased: <Shield className="h-4 w-4" />,
 
-		// Contact
+		// Contact & Ownership
 		contactName: <Users className="h-4 w-4" />,
 		contactPhone: <Phone className="h-4 w-4" />,
 		contactEmail: <Mail className="h-4 w-4" />,
 		contactWebsite: <Globe className="h-4 w-4" />,
+
+		// Owner Information
+		owrcompanyname: <Shield className="h-4 w-4" />,
+		owrcontactid: <Users className="h-4 w-4" />,
+		owrcompid: <Shield className="h-4 w-4" />,
+		owraddress1: <MapPin className="h-4 w-4" />,
+		owraddress2: <MapPin className="h-4 w-4" />,
+		owrcity: <MapPin className="h-4 w-4" />,
+		owrstate: <MapPin className="h-4 w-4" />,
+		owrzip: <MapPin className="h-4 w-4" />,
+		owrcountry: <MapPin className="h-4 w-4" />,
+		owrphone1: <Phone className="h-4 w-4" />,
+		owrphone2: <Phone className="h-4 w-4" />,
+		owrfname: <Users className="h-4 w-4" />,
+		owrmiddle: <Users className="h-4 w-4" />,
+		owrlname: <Users className="h-4 w-4" />,
+		owremail: <Mail className="h-4 w-4" />,
+
+		// Operator Information
+		oprcompanyname: <Activity className="h-4 w-4" />,
+		oprcontactid: <Users className="h-4 w-4" />,
+		oprcompid: <Activity className="h-4 w-4" />,
+		opraddress1: <MapPin className="h-4 w-4" />,
+		opraddress2: <MapPin className="h-4 w-4" />,
+		oprcity: <MapPin className="h-4 w-4" />,
+		oprstate: <MapPin className="h-4 w-4" />,
+		oprzip: <MapPin className="h-4 w-4" />,
+		oprcountry: <MapPin className="h-4 w-4" />,
+		oprphone1: <Phone className="h-4 w-4" />,
+		oprphone2: <Phone className="h-4 w-4" />,
+		oprfname: <Users className="h-4 w-4" />,
+		oprmiddle: <Users className="h-4 w-4" />,
+		oprlname: <Users className="h-4 w-4" />,
+		opremail: <Mail className="h-4 w-4" />,
+
+		// Broker Information
+		excbrk1companyname: <Star className="h-4 w-4" />,
+		excbrk1contactid: <Users className="h-4 w-4" />,
+		excbrk1compid: <Star className="h-4 w-4" />,
+		excbrk1address1: <MapPin className="h-4 w-4" />,
+		excbrk1address2: <MapPin className="h-4 w-4" />,
+		excbrk1city: <MapPin className="h-4 w-4" />,
+		excbrk1state: <MapPin className="h-4 w-4" />,
+		excbrk1zip: <MapPin className="h-4 w-4" />,
+		excbrk1country: <MapPin className="h-4 w-4" />,
+		excbrk1phone1: <Phone className="h-4 w-4" />,
+		excbrk1phone2: <Phone className="h-4 w-4" />,
+		excbrk1fname: <Users className="h-4 w-4" />,
+		excbrk1middle: <Users className="h-4 w-4" />,
+		excbrk1lname: <Users className="h-4 w-4" />,
+		excbrk1title: <Users className="h-4 w-4" />,
+		excbrk1email: <Mail className="h-4 w-4" />,
+
+		// Additional Contacts
+		addl1companyname: <Users className="h-4 w-4" />,
+		addl1contactid: <Users className="h-4 w-4" />,
+		addl1compid: <Users className="h-4 w-4" />,
+		addl1address1: <MapPin className="h-4 w-4" />,
+		addl1city: <MapPin className="h-4 w-4" />,
+		addl1state: <MapPin className="h-4 w-4" />,
+		addl1zip: <MapPin className="h-4 w-4" />,
+		addl1country: <MapPin className="h-4 w-4" />,
+		addl1phone1: <Phone className="h-4 w-4" />,
+		addl1fname: <Users className="h-4 w-4" />,
+		addl1lname: <Users className="h-4 w-4" />,
+		addl1email: <Mail className="h-4 w-4" />,
 
 		// System
 		createdAt: <Calendar className="h-4 w-4" />,
@@ -297,6 +501,9 @@ const getBadgeVariant = (value: unknown): 'default' | 'secondary' | 'destructive
 };
 
 export function DataFormatter({ data, title, icon, className = '' }: DataFormatterProps) {
+	const [showRawData, setShowRawData] = useState(false);
+	const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+
 	if (!data || Object.keys(data).length === 0) {
 		return (
 			<Card className={`modern-card ${className}`}>
@@ -319,7 +526,22 @@ export function DataFormatter({ data, title, icon, className = '' }: DataFormatt
 	}
 
 	// Separate populated and empty fields
-	const allEntries = Object.entries(data);
+	// Handle case where data might be a string or other non-object type
+	let allEntries: [string, unknown][] = [];
+
+	if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+		allEntries = Object.entries(data);
+	} else if (typeof data === 'string') {
+		// If data is a string, treat it as a single field
+		allEntries = [['data', data]];
+	} else if (Array.isArray(data)) {
+		// If data is an array, treat it as a single field
+		allEntries = [['data', data]];
+	} else {
+		// For other types, treat as single field
+		allEntries = [['data', data]];
+	}
+
 	const populatedEntries = allEntries.filter(
 		([, value]) =>
 			value !== null &&
@@ -382,6 +604,61 @@ export function DataFormatter({ data, title, icon, className = '' }: DataFormatt
 							{title}
 						</span>
 						<div className="ml-auto flex items-center gap-2">
+							{!showRawData && (
+								<div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+									<Button
+										variant={viewMode === 'grid' ? 'default' : 'ghost'}
+										size="sm"
+										onClick={() => setViewMode('grid')}
+										className="h-7 px-2 text-xs"
+									>
+										<Grid3X3 className="h-3 w-3" />
+									</Button>
+									<Button
+										variant={viewMode === 'table' ? 'default' : 'ghost'}
+										size="sm"
+										onClick={() => setViewMode('table')}
+										className="h-7 px-2 text-xs"
+									>
+										<Table className="h-3 w-3" />
+									</Button>
+								</div>
+							)}
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => setShowRawData(!showRawData)}
+								className="h-8 px-2 text-xs"
+							>
+								{showRawData ? <Eye className="h-3 w-3 mr-1" /> : <Code className="h-3 w-3 mr-1" />}
+								{showRawData ? 'Formatted' : 'Raw JSON'}
+							</Button>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => {
+									const csvData = populatedEntries.map(([key, value]) => ({
+										Field: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+										Value: typeof value === 'object' ? JSON.stringify(value) : String(value),
+										Type: typeof value,
+									}));
+									const csv = [
+										'Field,Value,Type',
+										...csvData.map(row => `"${row.Field}","${row.Value}","${row.Type}"`),
+									].join('\n');
+									const blob = new Blob([csv], { type: 'text/csv' });
+									const url = URL.createObjectURL(blob);
+									const a = document.createElement('a');
+									a.href = url;
+									a.download = `${title.toLowerCase().replace(/\s+/g, '-')}-data.csv`;
+									a.click();
+									URL.revokeObjectURL(url);
+								}}
+								className="h-8 px-2 text-xs"
+							>
+								<Download className="h-3 w-3 mr-1" />
+								Export
+							</Button>
 							<Badge variant="default" className="badge-modern">
 								{populatedEntries.length} populated
 							</Badge>
@@ -394,42 +671,132 @@ export function DataFormatter({ data, title, icon, className = '' }: DataFormatt
 					</CardTitle>
 				</CardHeader>
 				<CardContent className="pt-0 space-y-6">
-					{/* Populated Fields */}
-					{populatedEntries.length > 0 && (
-						<div className="data-group">
-							<div className="data-group-header">Populated Fields ({populatedEntries.length})</div>
-							<div className="space-y-3">
-								{populatedEntries.map(([key, value], index) => (
-									<motion.div
-										key={key}
-										initial={{ opacity: 0, x: -20 }}
-										animate={{ opacity: 1, x: 0 }}
-										transition={{ delay: index * 0.02 }}
-										className="data-field group cursor-pointer hover:bg-muted/30 rounded-lg p-2 transition-colors"
-										onClick={() => {
-											const textToCopy = `${key}: ${
-												typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)
-											}`;
-											navigator.clipboard.writeText(textToCopy);
-										}}
-									>
-										<div className="flex items-center gap-2">
-											<div className="flex-shrink-0 p-1 rounded-md bg-primary/10 text-primary">
-												{getIconForField(key)}
-											</div>
-											<span className="data-field-label">
-												{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-											</span>
-										</div>
-										<div className="data-field-value">{renderValue(value)}</div>
-									</motion.div>
-								))}
+					{/* Raw JSON View */}
+					{showRawData && (
+						<div className="space-y-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-sm font-semibold text-foreground">Raw JSON Data</h3>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => navigator.clipboard.writeText(JSON.stringify(data, null, 2))}
+									className="h-8 px-2 text-xs"
+								>
+									Copy JSON
+								</Button>
 							</div>
+							<pre className="bg-muted/30 rounded-lg p-4 text-xs overflow-auto max-h-96 border border-border/30">
+								<code className="text-foreground">{JSON.stringify(data, null, 2)}</code>
+							</pre>
+						</div>
+					)}
+
+					{/* Populated Fields - Grid or Table Layout */}
+					{!showRawData && populatedEntries.length > 0 && (
+						<div className="space-y-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-sm font-semibold text-foreground">Populated Fields</h3>
+								<Badge variant="secondary" className="text-xs">
+									{populatedEntries.length} fields
+								</Badge>
+							</div>
+
+							{viewMode === 'grid' ? (
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									{populatedEntries.map(([key, value], index) => (
+										<motion.div
+											key={key}
+											initial={{ opacity: 0, y: 10 }}
+											animate={{ opacity: 1, y: 0 }}
+											transition={{ delay: index * 0.02 }}
+											className="group cursor-pointer hover:bg-muted/20 rounded-lg p-3 transition-all duration-200 border border-border/30 hover:border-border/60"
+											onClick={() => {
+												const textToCopy = `${key}: ${
+													typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)
+												}`;
+												navigator.clipboard.writeText(textToCopy);
+											}}
+										>
+											<div className="flex items-start gap-3">
+												<div className="flex-shrink-0 p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+													{getIconForField(key)}
+												</div>
+												<div className="flex-1 min-w-0">
+													<div className="text-sm font-medium text-foreground mb-1">
+														{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+													</div>
+													<div className="text-sm text-muted-foreground">{renderValue(value)}</div>
+												</div>
+											</div>
+										</motion.div>
+									))}
+								</div>
+							) : (
+								<div className="overflow-x-auto">
+									<table className="w-full border-collapse">
+										<thead>
+											<tr className="border-b border-border/30">
+												<th className="text-left py-3 px-4 text-sm font-semibold text-foreground">
+													Field
+												</th>
+												<th className="text-left py-3 px-4 text-sm font-semibold text-foreground">
+													Value
+												</th>
+												<th className="text-left py-3 px-4 text-sm font-semibold text-foreground">
+													Type
+												</th>
+											</tr>
+										</thead>
+										<tbody>
+											{populatedEntries.map(([key, value], index) => (
+												<motion.tr
+													key={key}
+													initial={{ opacity: 0, x: -10 }}
+													animate={{ opacity: 1, x: 0 }}
+													transition={{ delay: index * 0.01 }}
+													className="border-b border-border/20 hover:bg-muted/10 transition-colors cursor-pointer"
+													onClick={() => {
+														const textToCopy = `${key}: ${
+															typeof value === 'object'
+																? JSON.stringify(value, null, 2)
+																: String(value)
+														}`;
+														navigator.clipboard.writeText(textToCopy);
+													}}
+												>
+													<td className="py-3 px-4">
+														<div className="flex items-center gap-2">
+															<div className="p-1 rounded bg-primary/10 text-primary">
+																{getIconForField(key)}
+															</div>
+															<span className="text-sm font-medium text-foreground">
+																{key
+																	.replace(/([A-Z])/g, ' $1')
+																	.replace(/^./, str => str.toUpperCase())}
+															</span>
+														</div>
+													</td>
+													<td className="py-3 px-4 max-w-md">
+														<div className="text-sm text-muted-foreground">
+															{renderValue(value)}
+														</div>
+													</td>
+													<td className="py-3 px-4">
+														<Badge variant="outline" className="text-xs">
+															{typeof value}
+														</Badge>
+													</td>
+												</motion.tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							)}
 						</div>
 					)}
 
 					{/* Empty Fields */}
-					{emptyEntries.length > 0 && (
+					{!showRawData && emptyEntries.length > 0 && (
 						<div className="data-group">
 							<div className="data-group-header data-field-empty">
 								Empty Fields ({emptyEntries.length})
@@ -454,15 +821,17 @@ export function DataFormatter({ data, title, icon, className = '' }: DataFormatt
 					)}
 
 					{/* Footer */}
-					<div className="pt-4 border-t border-border/50">
-						<div className="flex items-center justify-between text-sm text-muted-foreground">
-							<span>Click populated fields to copy to clipboard</span>
-							<span className="flex items-center gap-2">
-								<Info className="h-3 w-3" />
-								{allEntries.length} total fields
-							</span>
+					{!showRawData && (
+						<div className="pt-4 border-t border-border/50">
+							<div className="flex items-center justify-between text-sm text-muted-foreground">
+								<span>Click populated fields to copy to clipboard</span>
+								<span className="flex items-center gap-2">
+									<Info className="h-3 w-3" />
+									{allEntries.length} total fields
+								</span>
+							</div>
 						</div>
-					</div>
+					)}
 				</CardContent>
 			</Card>
 		</motion.div>
@@ -518,6 +887,62 @@ export function ContactFormatter({ data }: { data: Record<string, unknown> }) {
 	);
 }
 
+export function OwnerFormatter({ data }: { data: Record<string, unknown> }) {
+	if (!data || Object.keys(data).length === 0) return null;
+
+	return (
+		<DataFormatter data={data} title="Owner Information" icon={<Shield className="h-5 w-5" />} />
+	);
+}
+
+export function OperatorFormatter({ data }: { data: Record<string, unknown> }) {
+	if (!data || Object.keys(data).length === 0) return null;
+
+	return (
+		<DataFormatter
+			data={data}
+			title="Operator Information"
+			icon={<Activity className="h-5 w-5" />}
+		/>
+	);
+}
+
+export function BrokerFormatter({ data }: { data: Record<string, unknown> }) {
+	if (!data || Object.keys(data).length === 0) return null;
+
+	return (
+		<DataFormatter data={data} title="Broker Information" icon={<Star className="h-5 w-5" />} />
+	);
+}
+
+export function RawDataFormatter({ data }: { data: Record<string, unknown> }) {
+	if (!data || Object.keys(data).length === 0) return null;
+
+	return (
+		<DataFormatter data={data} title="Raw JetNet Data" icon={<FileText className="h-5 w-5" />} />
+	);
+}
+
+export function AvionicsFormatter({ data }: { data: Record<string, unknown> }) {
+	if (!data || Object.keys(data).length === 0) return null;
+
+	return (
+		<DataFormatter
+			data={data}
+			title="Avionics & Electronics"
+			icon={<Radio className="h-5 w-5" />}
+		/>
+	);
+}
+
+export function ImagesFormatter({ data }: { data: Record<string, unknown> }) {
+	if (!data || Object.keys(data).length === 0) return null;
+
+	return (
+		<DataFormatter data={data} title="Aircraft Images" icon={<Camera className="h-5 w-5" />} />
+	);
+}
+
 export function OwnershipFormatter({ data }: { data: Record<string, unknown> }) {
 	if (!data || Object.keys(data).length === 0) return null;
 
@@ -546,6 +971,18 @@ export function EnrichmentFormatter({ enrichment }: { enrichment: Record<string,
 		{ key: 'exterior', title: 'Exterior Details', icon: <Plane className="h-5 w-5" /> },
 		{ key: 'maintenance', title: 'Maintenance Data', icon: <Wrench className="h-5 w-5" /> },
 		{ key: 'relationships', title: 'Company Relationships', icon: <Users className="h-5 w-5" /> },
+		{ key: 'images', title: 'Aircraft Images', icon: <Camera className="h-5 w-5" /> },
+		{ key: 'photos', title: 'Photo Gallery', icon: <Camera className="h-5 w-5" /> },
+		{
+			key: 'avionicsSuite',
+			title: 'Avionics & Electronics',
+			icon: <Monitor className="h-5 w-5" />,
+		},
+		{ key: 'autopilot', title: 'Autopilot System', icon: <Navigation className="h-5 w-5" /> },
+		{ key: 'gps', title: 'GPS Navigation', icon: <Navigation className="h-5 w-5" /> },
+		{ key: 'radar', title: 'Radar Systems', icon: <Radar className="h-5 w-5" /> },
+		{ key: 'audio', title: 'Audio Systems', icon: <Headphones className="h-5 w-5" /> },
+		{ key: 'power', title: 'Power Systems', icon: <Power className="h-5 w-5" /> },
 	];
 
 	return (

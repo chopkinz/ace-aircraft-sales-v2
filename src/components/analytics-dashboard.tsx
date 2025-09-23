@@ -1,26 +1,51 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { motion } from 'framer-motion';
 import {
-	BarChart3,
-	TrendingUp,
-	Plane,
-	DollarSign,
+	Container,
+	Typography,
+	Box,
+	Card,
+	CardContent,
+	CardHeader,
+	Button,
+	Chip,
+	IconButton,
+	Tooltip,
+	LinearProgress,
+	Fade,
+	Grow,
+	useTheme,
+	Avatar,
+	Alert,
+} from '@mui/material';
+import {
+	BarChart as BarChartIcon,
+	TrendingUp as TrendingUpIcon,
+	Flight as FlightIcon,
+	AttachMoney as DollarIcon,
+	Flag as TargetIcon,
+	ArrowUpward as ArrowUpIcon,
+	ArrowDownward as ArrowDownIcon,
+	Refresh as RefreshIcon,
+	Download as DownloadIcon,
+	Info as InfoIcon,
+} from '@mui/icons-material';
+import {
+	BarChart,
+	Bar,
+	XAxis,
+	YAxis,
+	CartesianGrid,
+	Tooltip as RechartsTooltip,
+	ResponsiveContainer,
 	PieChart,
-	Activity,
-	Target,
-	ArrowUpRight,
-	ArrowDownRight,
-	RefreshCw,
-	Download,
-} from 'lucide-react';
-import { HelpTooltip } from '@/components/ui/help-tooltip';
-import { ExportDialog } from '@/components/ui/export-dialog';
+	Pie,
+	Cell,
+	Area,
+	AreaChart,
+} from 'recharts';
+import toast from 'react-hot-toast';
 
 interface AnalyticsData {
 	aircraft: Array<{
@@ -46,9 +71,10 @@ interface MetricCardProps {
 	value: string | number;
 	change?: number;
 	changeType?: 'positive' | 'negative' | 'neutral';
-	icon: React.ComponentType<{ className?: string }>;
+	icon: React.ComponentType;
 	description?: string;
 	helpContent?: string;
+	color?: 'primary' | 'success' | 'warning' | 'error' | 'info';
 }
 
 const MetricCard = ({
@@ -59,431 +85,501 @@ const MetricCard = ({
 	icon: Icon,
 	description,
 	helpContent,
-}: MetricCardProps) => (
-	<Card className="modern-card hover-lift">
-		<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-			<CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-				{title}
-				{helpContent && <HelpTooltip content={helpContent} icon="info" />}
-			</CardTitle>
-			<motion.div
-				animate={{ rotate: [0, 5, -5, 0] }}
-				transition={{ duration: 2, repeat: Infinity }}
+	color = 'primary',
+}: MetricCardProps) => {
+	const theme = useTheme();
+
+	return (
+		<Grow in={true} timeout={800}>
+			<Card
+				sx={{
+					height: '100%',
+					position: 'relative',
+					overflow: 'hidden',
+					'&:hover': {
+						transform: 'translateY(-4px)',
+						boxShadow: theme.shadows[8],
+					},
+					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+				}}
 			>
-				<Icon className="h-4 w-4 text-primary" />
-			</motion.div>
-		</CardHeader>
-		<CardContent>
-			<div className="text-2xl font-bold">{value}</div>
-			{change !== undefined && (
-				<div className="flex items-center gap-1 text-xs">
-					{changeType === 'positive' ? (
-						<>
-							<ArrowUpRight className="h-3 w-3 text-green-600" />
-							<span className="text-green-600">+{change}%</span>
-						</>
-					) : changeType === 'negative' ? (
-						<>
-							<ArrowDownRight className="h-3 w-3 text-red-600" />
-							<span className="text-red-600">{change}%</span>
-						</>
-					) : (
-						<span className="text-muted-foreground">{change}%</span>
-					)}
-					<span className="text-muted-foreground">vs last month</span>
-				</div>
-			)}
-			{description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
-		</CardContent>
-	</Card>
-);
-
-interface ChartProps {
-	data: Array<{ label: string; value: number; color?: string }>;
-	title: string;
-	type: 'bar' | 'pie' | 'line';
-	height?: number;
-}
-
-const SimpleChart = ({ data, title, type, height = 200 }: ChartProps) => {
-	const maxValue = Math.max(...data.map(d => d.value));
-
-	if (type === 'bar') {
-		return (
-			<Card className="modern-card">
-				<CardHeader>
-					<CardTitle className="text-lg flex items-center gap-2">
-						<BarChart3 className="h-5 w-5" />
-						{title}
-					</CardTitle>
+				<CardHeader
+					sx={{
+						pb: 1,
+						'& .MuiCardHeader-content': {
+							display: 'flex',
+							alignItems: 'center',
+							gap: 1,
+						},
+					}}
+				>
+					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+						<Typography variant="body2" color="text.secondary" fontWeight={600}>
+							{title}
+						</Typography>
+						{helpContent && (
+							<Tooltip title={helpContent} arrow>
+								<IconButton size="small" sx={{ p: 0.5 }}>
+									<InfoIcon fontSize="small" />
+								</IconButton>
+							</Tooltip>
+						)}
+					</Box>
+					<Avatar
+						sx={{
+							bgcolor: `${color}.main`,
+							color: `${color}.contrastText`,
+							width: 40,
+							height: 40,
+						}}
+					>
+						<Icon />
+					</Avatar>
 				</CardHeader>
-				<CardContent>
-					<div className="space-y-3" style={{ maxHeight: `${height}px`, overflowY: 'auto' }}>
-						{data.map((item, index) => (
-							<div key={index} className="space-y-1">
-								<div className="flex justify-between text-sm">
-									<span className="font-medium truncate pr-2">{item.label}</span>
-									<span className="text-muted-foreground flex-shrink-0">{item.value}</span>
-								</div>
-								<div className="w-full bg-muted rounded-full h-2">
-									<div
-										className="bg-primary h-2 rounded-full transition-all duration-500"
-										style={{ width: `${(item.value / maxValue) * 100}%` }}
-									/>
-								</div>
-							</div>
-						))}
-					</div>
+				<CardContent sx={{ pt: 0 }}>
+					<Typography variant="h4" fontWeight={700} gutterBottom>
+						{value}
+					</Typography>
+					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+						{change !== undefined && (
+							<Chip
+								icon={changeType === 'positive' ? <ArrowUpIcon /> : <ArrowDownIcon />}
+								label={`${change > 0 ? '+' : ''}${change}%`}
+								size="small"
+								color={
+									changeType === 'positive'
+										? 'success'
+										: changeType === 'negative'
+										? 'error'
+										: 'default'
+								}
+								variant="outlined"
+								sx={{ fontSize: '0.75rem', height: 24 }}
+							/>
+						)}
+						<Typography variant="body2" color="text.secondary">
+							{description}
+						</Typography>
+					</Box>
 				</CardContent>
 			</Card>
-		);
-	}
-
-	if (type === 'pie') {
-		return (
-			<Card className="modern-card">
-				<CardHeader>
-					<CardTitle className="text-lg flex items-center gap-2">
-						<PieChart className="h-5 w-5" />
-						{title}
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="space-y-3 max-h-96 overflow-y-auto">
-						{data.map((item, index) => {
-							const percentage = (item.value / data.reduce((sum, d) => sum + d.value, 0)) * 100;
-
-							return (
-								<div key={item.label} className="flex items-center gap-3">
-									<div
-										className="w-4 h-4 rounded-full flex-shrink-0"
-										style={{ backgroundColor: item.color || `hsl(${(index % 6) * 60}, 70%, 50%)` }}
-									/>
-									<div className="flex-1 min-w-0">
-										<div className="flex justify-between text-sm">
-											<span className="font-medium truncate pr-2">{item.label}</span>
-											<span className="text-muted-foreground flex-shrink-0">
-												{item.value} ({percentage.toFixed(1)}%)
-											</span>
-										</div>
-										<div className="w-full bg-muted rounded-full h-1.5 mt-1">
-											<div
-												className="h-1.5 rounded-full transition-all duration-500"
-												style={{
-													width: `${percentage}%`,
-													backgroundColor: item.color || `hsl(${index * 60}, 70%, 50%)`,
-												}}
-											/>
-										</div>
-									</div>
-								</div>
-							);
-						})}
-					</div>
-				</CardContent>
-			</Card>
-		);
-	}
-
-	return null;
+		</Grow>
+	);
 };
 
 export function AnalyticsDashboard() {
-	const [data, setData] = useState<AnalyticsData>({ aircraft: [], marketData: [] });
+	const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [timeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
-
-	useEffect(() => {
-		fetchAnalyticsData();
-	}, [timeRange]);
+	const [refreshing, setRefreshing] = useState(false);
+	const theme = useTheme();
 
 	const fetchAnalyticsData = async () => {
 		try {
-			setLoading(true);
-			const response = await fetch('/api/database/aircraft/comprehensive');
-			const aircraftData = await response.json();
+			setRefreshing(true);
 
-			if (aircraftData.aircraft) {
-				setData({
-					aircraft: aircraftData.aircraft,
-					marketData: [], // We'll generate this from aircraft data for now
+			// Fetch comprehensive aircraft data
+			const response = await fetch('/api/database/aircraft/comprehensive?limit=10000');
+			const data = await response.json();
+
+			if (data.success && data.data) {
+				const aircraft = data.data.map(
+					(item: {
+						id?: string;
+						aircraftId?: string;
+						manufacturer?: string;
+						make?: string;
+						model?: string;
+						yearManufactured?: number;
+						year?: number;
+						yearmfr?: number;
+						askingPrice?: number;
+						price?: number;
+						status?: string;
+						location?: string;
+						basecity?: string;
+						createdAt?: string;
+						updatedAt?: string;
+					}) => ({
+						id: item.id || item.aircraftId,
+						manufacturer: item.manufacturer || item.make,
+						model: item.model,
+						year: item.yearManufactured || item.year || item.yearmfr,
+						price: item.askingPrice || item.price,
+						status: item.status,
+						location: item.location || item.basecity,
+						createdAt: item.createdAt || item.updatedAt,
+					})
+				);
+
+				// Generate market data from aircraft data
+				const marketData = aircraft
+					.filter((a: { price?: number; createdAt?: string }) => a.price && a.createdAt)
+					.map((a: { id: string; price: number; createdAt: string }) => ({
+						id: a.id,
+						aircraftId: a.id,
+						price: a.price,
+						date: a.createdAt,
+					}));
+
+				setAnalyticsData({
+					aircraft,
+					marketData,
 				});
+			} else {
+				toast.error('Failed to fetch analytics data');
 			}
 		} catch (error) {
 			console.error('Error fetching analytics data:', error);
+			toast.error('Failed to fetch analytics data');
 		} finally {
 			setLoading(false);
+			setRefreshing(false);
 		}
 	};
 
-	// Calculate metrics
-	const metrics = useMemo(() => {
-		if (!data.aircraft.length) return null;
-
-		const totalAircraft = data.aircraft.length;
-		const availableAircraft = data.aircraft.filter(a => a.status === 'AVAILABLE').length;
-		const soldAircraft = data.aircraft.filter(a => a.status === 'SOLD').length;
-		const avgPrice =
-			data.aircraft
-				.filter(a => a.price && a.price > 0)
-				.reduce((sum, a) => sum + (a.price || 0), 0) /
-			data.aircraft.filter(a => a.price && a.price > 0).length;
-
-		// Price range analysis
-		const prices = data.aircraft.filter(a => a.price && a.price > 0).map(a => a.price!);
-		const minPrice = Math.min(...prices);
-		const maxPrice = Math.max(...prices);
-
-		// Manufacturer distribution
-		const manufacturerCounts = data.aircraft.reduce((acc, aircraft) => {
-			acc[aircraft.manufacturer] = (acc[aircraft.manufacturer] || 0) + 1;
-			return acc;
-		}, {} as Record<string, number>);
-
-		// Year distribution (last 10 years)
-		const currentYear = new Date().getFullYear();
-		const yearCounts = data.aircraft.reduce((acc, aircraft) => {
-			if (aircraft.year && aircraft.year >= currentYear - 10) {
-				acc[aircraft.year] = (acc[aircraft.year] || 0) + 1;
-			}
-			return acc;
-		}, {} as Record<number, number>);
-
-		// Location distribution
-		const locationCounts = data.aircraft.reduce((acc, aircraft) => {
-			const location = aircraft.location || 'Unknown';
-			acc[location] = (acc[location] || 0) + 1;
-			return acc;
-		}, {} as Record<string, number>);
-
-		// Status distribution
-		const statusCounts = data.aircraft.reduce((acc, aircraft) => {
-			acc[aircraft.status] = (acc[aircraft.status] || 0) + 1;
-			return acc;
-		}, {} as Record<string, number>);
-
-		return {
-			totalAircraft,
-			availableAircraft,
-			soldAircraft,
-			avgPrice: isNaN(avgPrice) ? 0 : avgPrice,
-			minPrice,
-			maxPrice,
-			manufacturerCounts,
-			yearCounts,
-			locationCounts,
-			statusCounts,
-		};
-	}, [data]);
+	useEffect(() => {
+		fetchAnalyticsData();
+	}, []);
 
 	const chartData = useMemo(() => {
-		if (!metrics) return { manufacturers: [], years: [], locations: [], statuses: [] };
+		if (!analyticsData) return [];
 
-		return {
-			manufacturers: Object.entries(metrics.manufacturerCounts)
-				.sort(([, a], [, b]) => b - a)
-				.map(([label, value], index) => ({ label, value, color: `hsl(${index * 36}, 70%, 50%)` })),
-			years: Object.entries(metrics.yearCounts)
-				.sort(([a], [b]) => Number(b) - Number(a))
-				.map(([label, value]) => ({ label: `${label}`, value })),
-			locations: Object.entries(metrics.locationCounts)
-				.sort(([, a], [, b]) => b - a)
-				.map(([label, value], index) => ({ label, value, color: `hsl(${index * 45}, 70%, 50%)` })),
-			statuses: Object.entries(metrics.statusCounts).map(([label, value]) => ({
-				label,
-				value,
-				color: label === 'AVAILABLE' ? '#22c55e' : label === 'SOLD' ? '#ef4444' : '#f59e0b',
-			})),
-		};
-	}, [metrics]);
+		// Group by manufacturer
+		const manufacturerData = analyticsData.aircraft.reduce(
+			(
+				acc: { [key: string]: { manufacturer: string; count: number; totalValue: number } },
+				aircraft: { manufacturer?: string; price: number | null }
+			) => {
+				const manufacturer = aircraft.manufacturer || 'Unknown';
+				if (!acc[manufacturer]) {
+					acc[manufacturer] = { manufacturer, count: 0, totalValue: 0 };
+				}
+				acc[manufacturer].count += 1;
+				acc[manufacturer].totalValue += aircraft.price || 0;
+				return acc;
+			},
+			{}
+		);
+
+		return Object.values(manufacturerData).slice(0, 10);
+	}, [analyticsData]);
+
+	const priceRangeData = useMemo(() => {
+		if (!analyticsData) return [];
+
+		const ranges = [
+			{ range: '0-1M', min: 0, max: 1000000 },
+			{ range: '1M-5M', min: 1000000, max: 5000000 },
+			{ range: '5M-10M', min: 5000000, max: 10000000 },
+			{ range: '10M-25M', min: 10000000, max: 25000000 },
+			{ range: '25M-50M', min: 25000000, max: 50000000 },
+			{ range: '50M+', min: 50000000, max: Infinity },
+		];
+
+		return ranges.map(range => ({
+			range: range.range,
+			count: analyticsData.aircraft.filter(
+				(a: { price: number | null }) => a.price && a.price >= range.min && a.price < range.max
+			).length,
+		}));
+	}, [analyticsData]);
+
+	const statusData = useMemo(() => {
+		if (!analyticsData) return [];
+
+		const statusCounts = analyticsData.aircraft.reduce(
+			(acc: { [key: string]: number }, aircraft: { status?: string }) => {
+				const status = aircraft.status || 'Unknown';
+				acc[status] = (acc[status] || 0) + 1;
+				return acc;
+			},
+			{}
+		);
+
+		return Object.entries(statusCounts).map(([status, count]) => ({
+			status,
+			count,
+		}));
+	}, [analyticsData]);
+
+	const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 	if (loading) {
 		return (
-			<div className="space-y-6">
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-					{[...Array(4)].map((_, i) => (
-						<Card key={i} className="modern-card">
-							<CardContent className="p-6">
-								<div className="space-y-3">
-									<div className="skeleton h-4 w-24" />
-									<div className="skeleton h-8 w-16" />
-									<div className="skeleton h-3 w-20" />
-								</div>
-							</CardContent>
-						</Card>
-					))}
-				</div>
-			</div>
+			<Container maxWidth="xl" sx={{ py: 4 }}>
+				<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+					<LinearProgress sx={{ width: '100%', maxWidth: 400 }} />
+					<Typography variant="h6" color="text.secondary">
+						Loading Analytics...
+					</Typography>
+				</Box>
+			</Container>
 		);
 	}
 
-	if (!metrics) {
+	if (!analyticsData) {
 		return (
-			<div className="empty-state">
-				<Activity className="h-16 w-16 empty-state-icon mx-auto" />
-				<h3 className="text-xl font-semibold mb-2">No Analytics Data</h3>
-				<p className="text-muted-foreground">No aircraft data available for analytics.</p>
-			</div>
+			<Container maxWidth="xl" sx={{ py: 4 }}>
+				<Alert severity="error">
+					Failed to load analytics data. Please try refreshing the page.
+				</Alert>
+			</Container>
 		);
 	}
+
+	const totalAircraft = analyticsData.aircraft.length;
+	const totalValue = analyticsData.aircraft.reduce((sum, a) => sum + (a.price || 0), 0);
+	const averagePrice = totalAircraft > 0 ? totalValue / totalAircraft : 0;
+	const forSaleCount = analyticsData.aircraft.filter(
+		a => a.status === 'ACTIVE' || a.status === 'For Sale'
+	).length;
 
 	return (
-		<div className="space-y-6">
-			{/* Header */}
-			<div className="flex items-center justify-between">
-				<div>
-					<h2 className="text-3xl font-bold flex items-center gap-3">
-						<BarChart3 className="h-8 w-8 text-primary" />
-						Analytics Dashboard
-					</h2>
-					<p className="text-muted-foreground mt-2">
-						Comprehensive insights into your aircraft inventory and market trends
-					</p>
-				</div>
-				<div className="flex items-center gap-3">
-					<ExportDialog data={[metrics]} dataType="reports">
-						<Button variant="outline" size="sm" className="btn-modern">
-							<Download className="h-4 w-4 mr-2" />
-							Export
-						</Button>
-					</ExportDialog>
-					<Button variant="outline" size="sm" onClick={fetchAnalyticsData} className="btn-modern">
-						<RefreshCw className="h-4 w-4 mr-2" />
-						Refresh
-					</Button>
-				</div>
-			</div>
+		<Box
+			sx={{
+				minHeight: '100vh',
+				background: `linear-gradient(135deg, ${theme.palette.background.default} 0%, ${theme.palette.primary.light}10 100%)`,
+				py: 4,
+			}}
+		>
+			<Container maxWidth="xl">
+				{/* Header */}
+				<Fade in={true} timeout={600}>
+					<Box sx={{ mb: 4 }}>
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+							<Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+								<BarChartIcon />
+							</Avatar>
+							<Box>
+								<Typography variant="h4" fontWeight={700} color="primary.main">
+									Market Analytics
+								</Typography>
+								<Typography variant="body1" color="text.secondary">
+									Comprehensive aviation market intelligence and trend analysis
+								</Typography>
+							</Box>
+						</Box>
 
-			{/* Key Metrics */}
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-				<MetricCard
-					title="Total Aircraft"
-					value={metrics.totalAircraft}
-					change={12}
-					changeType="positive"
-					icon={Plane}
-					description="Total aircraft in inventory"
-					helpContent="Total number of aircraft records in the system"
-				/>
-				<MetricCard
-					title="Available"
-					value={metrics.availableAircraft}
-					change={8}
-					changeType="positive"
-					icon={Target}
-					description="Aircraft available for sale"
-					helpContent="Number of aircraft currently available for purchase"
-				/>
-				<MetricCard
-					title="Average Price"
-					value={`$${metrics.avgPrice.toLocaleString()}`}
-					change={-3}
-					changeType="negative"
-					icon={DollarSign}
-					description="Average aircraft price"
-					helpContent="Average price of all aircraft with listed prices"
-				/>
-				<MetricCard
-					title="Price Range"
-					value={`$${(metrics.minPrice / 1000000).toFixed(1)}M - $${(
-						metrics.maxPrice / 1000000
-					).toFixed(1)}M`}
-					change={5}
-					changeType="positive"
-					icon={TrendingUp}
-					description="Price range of inventory"
-					helpContent="Range from lowest to highest priced aircraft"
-				/>
-			</div>
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+							<Button
+								variant="outlined"
+								startIcon={
+									<RefreshIcon
+										sx={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }}
+									/>
+								}
+								onClick={fetchAnalyticsData}
+								disabled={refreshing}
+							>
+								{refreshing ? 'Refreshing...' : 'Refresh Data'}
+							</Button>
+							<Button
+								variant="contained"
+								startIcon={<DownloadIcon />}
+								sx={{
+									background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+								}}
+							>
+								Export Report
+							</Button>
+						</Box>
+					</Box>
+				</Fade>
 
-			{/* Charts */}
-			<Tabs defaultValue="overview" className="w-full">
-				<TabsList className="grid w-full grid-cols-4">
-					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="manufacturers">Manufacturers</TabsTrigger>
-					<TabsTrigger value="locations">Locations</TabsTrigger>
-					<TabsTrigger value="trends">Trends</TabsTrigger>
-				</TabsList>
+				{/* Metrics Cards */}
+				<Fade in={true} timeout={800}>
+					<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+						<Box sx={{ flex: '1 1 300px', minWidth: 300 }}>
+							<MetricCard
+								title="Total Aircraft"
+								value={totalAircraft.toLocaleString()}
+								change={12}
+								changeType="positive"
+								icon={FlightIcon}
+								description={`${forSaleCount} available for sale`}
+								helpContent="Total number of aircraft in the database"
+								color="primary"
+							/>
+						</Box>
+						<Box sx={{ flex: '1 1 300px', minWidth: 300 }}>
+							<MetricCard
+								title="Total Market Value"
+								value={new Intl.NumberFormat('en-US', {
+									style: 'currency',
+									currency: 'USD',
+									minimumFractionDigits: 0,
+									maximumFractionDigits: 0,
+								}).format(totalValue)}
+								change={8}
+								changeType="positive"
+								icon={DollarIcon}
+								description="Combined value of all listings"
+								helpContent="Total market value of all aircraft listings"
+								color="success"
+							/>
+						</Box>
+						<Box sx={{ flex: '1 1 300px', minWidth: 300 }}>
+							<MetricCard
+								title="Average Price"
+								value={new Intl.NumberFormat('en-US', {
+									style: 'currency',
+									currency: 'USD',
+									minimumFractionDigits: 0,
+									maximumFractionDigits: 0,
+								}).format(averagePrice)}
+								change={-2}
+								changeType="negative"
+								icon={TrendingUpIcon}
+								description="Per aircraft"
+								helpContent="Average price across all aircraft"
+								color="info"
+							/>
+						</Box>
+						<Box sx={{ flex: '1 1 300px', minWidth: 300 }}>
+							<MetricCard
+								title="Active Listings"
+								value={forSaleCount.toLocaleString()}
+								change={15}
+								changeType="positive"
+								icon={TargetIcon}
+								description="Currently for sale"
+								helpContent="Number of aircraft currently available for purchase"
+								color="warning"
+							/>
+						</Box>
+					</Box>
+				</Fade>
 
-				<TabsContent value="overview" className="mt-6">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						<SimpleChart
-							data={chartData.statuses}
-							title="Aircraft Status Distribution"
-							type="pie"
-						/>
-						<SimpleChart
-							data={chartData.manufacturers.slice(0, 6)}
-							title="Top Manufacturers"
-							type="bar"
-						/>
-					</div>
-				</TabsContent>
+				{/* Charts */}
+				<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+					{/* Aircraft by Manufacturer */}
+					<Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
+						<Fade in={true} timeout={1000}>
+							<Card>
+								<CardHeader
+									title={
+										<Typography variant="h6" fontWeight={600}>
+											Aircraft by Manufacturer
+										</Typography>
+									}
+								/>
+								<CardContent>
+									<Box sx={{ height: 300 }}>
+										<ResponsiveContainer width="100%" height="100%">
+											<BarChart data={chartData}>
+												<CartesianGrid strokeDasharray="3 3" />
+												<XAxis dataKey="manufacturer" />
+												<YAxis />
+												<RechartsTooltip />
+												<Bar dataKey="count" fill={theme.palette.primary.main} />
+											</BarChart>
+										</ResponsiveContainer>
+									</Box>
+								</CardContent>
+							</Card>
+						</Fade>
+					</Box>
 
-				<TabsContent value="manufacturers" className="mt-6">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						<SimpleChart
-							data={chartData.manufacturers}
-							title="Manufacturer Distribution"
-							type="pie"
-						/>
-						<SimpleChart
-							data={chartData.manufacturers}
-							title="Manufacturer Count"
-							type="bar"
-							height={400}
-						/>
-					</div>
-				</TabsContent>
+					{/* Price Distribution */}
+					<Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
+						<Fade in={true} timeout={1200}>
+							<Card>
+								<CardHeader
+									title={
+										<Typography variant="h6" fontWeight={600}>
+											Price Distribution
+										</Typography>
+									}
+								/>
+								<CardContent>
+									<Box sx={{ height: 300 }}>
+										<ResponsiveContainer width="100%" height="100%">
+											<PieChart>
+												<Pie
+													data={priceRangeData}
+													cx="50%"
+													cy="50%"
+													labelLine={false}
+													label={({ range, count }) => `${range}: ${count}`}
+													outerRadius={80}
+													fill="#8884d8"
+													dataKey="count"
+												>
+													{priceRangeData.map((entry, index) => (
+														<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+													))}
+												</Pie>
+												<RechartsTooltip />
+											</PieChart>
+										</ResponsiveContainer>
+									</Box>
+								</CardContent>
+							</Card>
+						</Fade>
+					</Box>
 
-				<TabsContent value="locations" className="mt-6">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						<SimpleChart data={chartData.locations} title="Location Distribution" type="pie" />
-						<SimpleChart
-							data={chartData.locations}
-							title="Aircraft by Location"
-							type="bar"
-							height={300}
-						/>
-					</div>
-				</TabsContent>
+					{/* Status Distribution */}
+					<Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
+						<Fade in={true} timeout={1400}>
+							<Card>
+								<CardHeader
+									title={
+										<Typography variant="h6" fontWeight={600}>
+											Status Distribution
+										</Typography>
+									}
+								/>
+								<CardContent>
+									<Box sx={{ height: 300 }}>
+										<ResponsiveContainer width="100%" height="100%">
+											<BarChart data={statusData} layout="horizontal">
+												<CartesianGrid strokeDasharray="3 3" />
+												<XAxis type="number" />
+												<YAxis dataKey="status" type="category" width={100} />
+												<RechartsTooltip />
+												<Bar dataKey="count" fill={theme.palette.secondary.main} />
+											</BarChart>
+										</ResponsiveContainer>
+									</Box>
+								</CardContent>
+							</Card>
+						</Fade>
+					</Box>
 
-				<TabsContent value="trends" className="mt-6">
-					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						<SimpleChart data={chartData.years} title="Aircraft by Year" type="bar" height={300} />
-						<Card className="modern-card">
-							<CardHeader>
-								<CardTitle className="text-lg flex items-center gap-2">
-									<TrendingUp className="h-5 w-5" />
-									Market Insights
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<div className="space-y-4">
-									<div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-										<span className="font-medium">Conversion Rate</span>
-										<Badge variant="secondary" className="badge-modern">
-											{((metrics.soldAircraft / metrics.totalAircraft) * 100).toFixed(1)}%
-										</Badge>
-									</div>
-									<div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-										<span className="font-medium">Inventory Turnover</span>
-										<Badge variant="secondary" className="badge-modern">
-											{metrics.soldAircraft} sold
-										</Badge>
-									</div>
-									<div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-										<span className="font-medium">Active Listings</span>
-										<Badge variant="secondary" className="badge-modern">
-											{metrics.availableAircraft} available
-										</Badge>
-									</div>
-								</div>
-							</CardContent>
-						</Card>
-					</div>
-				</TabsContent>
-			</Tabs>
-		</div>
+					{/* Market Trends */}
+					<Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
+						<Fade in={true} timeout={1600}>
+							<Card>
+								<CardHeader
+									title={
+										<Typography variant="h6" fontWeight={600}>
+											Market Trends
+										</Typography>
+									}
+								/>
+								<CardContent>
+									<Box sx={{ height: 300 }}>
+										<ResponsiveContainer width="100%" height="100%">
+											<AreaChart data={chartData}>
+												<CartesianGrid strokeDasharray="3 3" />
+												<XAxis dataKey="manufacturer" />
+												<YAxis />
+												<RechartsTooltip />
+												<Area
+													type="monotone"
+													dataKey="totalValue"
+													stroke={theme.palette.primary.main}
+													fill={theme.palette.primary.light}
+												/>
+											</AreaChart>
+										</ResponsiveContainer>
+									</Box>
+								</CardContent>
+							</Card>
+						</Fade>
+					</Box>
+				</Box>
+			</Container>
+		</Box>
 	);
 }

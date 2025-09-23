@@ -44,17 +44,17 @@ export async function GET(request: NextRequest) {
 				});
 			}
 
-			case 'sample-data': {
-				// Get sample aircraft data (first 10 records)
+			case 'aircraft-data': {
+				// Get real aircraft data from JetNet
 				const response = await jetnetAPI.getComprehensiveAircraftData();
-				const sampleData = response.aircraft?.slice(0, 10) || [];
+				const aircraftData = response.aircraft || [];
 
 				return NextResponse.json({
 					success: true,
 					data: {
-						sampleCount: sampleData.length,
+						aircraftCount: aircraftData.length,
 						totalCount: response.aircraft?.length || 0,
-						sampleData: sampleData.map(aircraft => ({
+						aircraftData: aircraftData.map(aircraft => ({
 							aircraftId: aircraft.aircraftid,
 							make: aircraft.make,
 							model: aircraft.model,
@@ -63,6 +63,14 @@ export async function GET(request: NextRequest) {
 							price: aircraft.askingprice,
 							location: aircraft.basecity,
 							forsale: aircraft.forsale,
+							serialNumber: aircraft.sernbr,
+							status: aircraft.marketstatus,
+							baseCountry: aircraft.basecountry,
+							baseState: aircraft.basestate,
+							totalTime: aircraft.aftt,
+							engines: aircraft.enginesn1,
+							avionics: aircraft.acavionics,
+							passengers: aircraft.acpassengers,
 						})),
 					},
 				});
@@ -93,7 +101,7 @@ export async function GET(request: NextRequest) {
 					{
 						success: false,
 						error:
-							'Invalid action. Available actions: test-auth, get-aircraft-count, sync-status, sample-data, aircraft-details',
+							'Invalid action. Available actions: test-auth, get-aircraft-count, sync-status, aircraft-data, aircraft-details',
 					},
 					{ status: 400 }
 				);
@@ -149,7 +157,9 @@ export async function POST(request: NextRequest) {
 					return NextResponse.json(
 						{
 							success: false,
-							error: `Failed to trigger workflow: ${error instanceof Error ? error.message : 'Unknown error'}`,
+							error: `Failed to trigger workflow: ${
+								error instanceof Error ? error.message : 'Unknown error'
+							}`,
 						},
 						{ status: 500 }
 					);

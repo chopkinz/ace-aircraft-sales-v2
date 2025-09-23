@@ -93,7 +93,7 @@ export function LoadingSpinner({
 			<motion.div
 				animate={{ rotate: 360 }}
 				transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-				className={sizeClasses[size]}
+				className={`${sizeClasses[size]} rounded-full bg-primary/10 p-2`}
 			>
 				<Loader2 className="h-full w-full text-primary" />
 			</motion.div>
@@ -101,7 +101,7 @@ export function LoadingSpinner({
 				<motion.p
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
-					className={`text-muted-foreground ${textSizeClasses[size]}`}
+					className={`text-muted-foreground font-medium ${textSizeClasses[size]}`}
 				>
 					{text}
 				</motion.p>
@@ -120,19 +120,19 @@ export function PageLoader({ message = 'Loading...' }: PageLoaderProps) {
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
-			className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+			className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md"
 		>
 			<motion.div
 				initial={{ scale: 0.8, opacity: 0 }}
 				animate={{ scale: 1, opacity: 1 }}
-				className="flex flex-col items-center gap-4 rounded-lg bg-card p-8 shadow-xl"
+				className="flex flex-col items-center gap-6 rounded-2xl bg-card/95 p-10 shadow-2xl border border-border/20 backdrop-blur-xl"
 			>
 				<LoadingSpinner variant="plane" size="lg" />
 				<motion.p
 					initial={{ opacity: 0, y: 10 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ delay: 0.2 }}
-					className="text-lg font-medium text-foreground"
+					className="text-xl font-semibold text-foreground"
 				>
 					{message}
 				</motion.p>

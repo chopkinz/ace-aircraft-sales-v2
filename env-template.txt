@@ -1,0 +1,25 @@
+# Environment Variables for Ace Aircraft Sales
+# Copy these to your .env.local file for local development
+# Add these to Vercel Environment Variables for production
+
+# Database Configuration - Prisma Accelerate
+POSTGRES_URL="postgres://05c523449d9e7385eb4606d01c6f6ab561525400e7f033aa4cf7510c01ef200b:sk_TtDwgExodyMFdlmEmnXXl@db.prisma.io:5432/postgres?sslmode=require"
+PRISMA_DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19CRmFycGp3NlZ4Rk9ZYkRlZE1sM3ciLCJhcGlfa2V5IjoiMDFLNVNYSllTUzYxSjI5TlpFMk1ZQTlESDIiLCJ0ZW5hbnRfaWQiOiIwNWM1MjM0NDlkOWU3Mzg1ZWI0NjA2ZDAxYzZmNmFiNTYxNTI1NDAwZTdmMDMzYWE0Y2Y3NTEwYzAxZWYyMDBiIiwiaW50ZXJuYWxfc2VjcmV0IjoiZWFlYTlmMzEtZDVlNC00Mzk4LTlmODMtZWY1NjVhNjI0ZjkxIn0.SpHAf7c9pDkd6atSU6m4SnXCOIp6KkT-FTtLOAxEArM"
+DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19CRmFycGp3NlZ4Rk9ZYkRlZE1sM3ciLCJhcGlfa2V5IjoiMDFLNVNYSllTUzYxSjI5TlpFMk1ZQTlESDIiLCJ0ZW5hbnRfaWQiOiIwNWM1MjM0NDlkOWU3Mzg1ZWI0NjA2ZDAxYzZmNmFiNTYxNTI1NDAwZTdmMDMzYWE0Y2Y3NTEwYzAxZWYyMDBiIiwiaW50ZXJuYWxfc2VjcmV0IjoiZWFlYTlmMzEtZDVlNC00Mzk4LTlmODMtZWY1NjVhNjI0ZjkxIn0.SpHAf7c9pDkd6atSU6m4SnXCOIp6KkT-FTtLOAxEArM"
+
+# NextAuth Configuration
+NEXTAUTH_URL="https://ace-aircraft-sales-v2.vercel.app"
+NEXTAUTH_SECRET="your-nextauth-secret-key-here"
+
+# JetNet API Configuration (Optional)
+JETNET_API_URL="https://api.jetnetconnect.com"
+
+JETNET_USERNAME="chase@theskylinebusinessgroup.com"
+JETNET_PASSWORD="Smiley654!"
+
+# File Storage Configuration
+STORAGE_PROVIDER="local"
+STORAGE_PATH="./uploads"
+
+# Application Configuration
+NODE_ENV="production"
