@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { AnalyticsDashboard } from '@/components/analytics-dashboard';
+import { ComprehensiveAnalyticsDashboard } from '@/components/comprehensive-analytics-dashboard';
 
 export default function AnalyticsPage() {
-	return <AnalyticsDashboard />;
+	return <ComprehensiveAnalyticsDashboard />;
 }

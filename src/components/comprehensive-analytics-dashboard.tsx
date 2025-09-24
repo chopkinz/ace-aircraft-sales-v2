@@ -1,0 +1,1231 @@
+'use client';
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+	Container,
+	Typography,
+	Box,
+	Card,
+	CardContent,
+	CardHeader,
+	Button,
+	Chip,
+	IconButton,
+	Tooltip,
+	LinearProgress,
+	Fade,
+	Grow,
+	useTheme,
+	Avatar,
+	Alert,
+	Paper,
+	TextField,
+	InputAdornment,
+	Select,
+	MenuItem,
+	FormControl,
+	InputLabel,
+	Switch,
+	FormControlLabel,
+	Divider,
+	Table,
+	TableBody,
+	TableCell,
+	TableContainer,
+	TableHead,
+	TableRow,
+	TablePagination,
+	TableSortLabel,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	Tabs,
+	Tab,
+} from '@mui/material';
+import {
+	BarChart as BarChartIcon,
+	TrendingUp as TrendingUpIcon,
+	Flight as FlightIcon,
+	AttachMoney as DollarIcon,
+	Flag as TargetIcon,
+	ArrowUpward as ArrowUpIcon,
+	ArrowDownward as ArrowDownIcon,
+	Refresh as RefreshIcon,
+	Download as DownloadIcon,
+	Info as InfoIcon,
+	FilterList as FilterIcon,
+	Search as SearchIcon,
+	Sync as SyncIcon,
+	Visibility as VisibilityIcon,
+	CheckCircle as CheckCircleIcon,
+	Error as ErrorIcon,
+} from '@mui/icons-material';
+import {
+	BarChart,
+	Bar,
+	XAxis,
+	YAxis,
+	CartesianGrid,
+	Tooltip as RechartsTooltip,
+	ResponsiveContainer,
+	PieChart,
+	Pie,
+	Cell,
+	Area,
+	AreaChart,
+} from 'recharts';
+import toast from 'react-hot-toast';
+import { type ComprehensiveAircraftData, type AnalyticsFilters } from '@/lib/analytics-data-mapper';
+
+interface AnalyticsData {
+	data: ComprehensiveAircraftData[];
+	pagination: {
+		page: number;
+		limit: number;
+		total: number;
+		totalPages: number;
+	};
+	summary: {
+		totalAircraft: number;
+		forSaleCount: number;
+		totalValue: number;
+		averagePrice: number;
+		manufacturerCounts: Record<string, number>;
+		yearCounts: Record<number, number>;
+		statusCounts: Record<string, number>;
+		locationCounts: Record<string, number>;
+		priceDistribution: Array<{ range: string; count: number; percentage: number }>;
+		topManufacturers: Array<{ manufacturer: string; count: number }>;
+		recentAircraft: ComprehensiveAircraftData[];
+	};
+	metadata: {
+		totalRecords: number;
+		filteredRecords: number;
+		queryTime: number;
+		requestId: string;
+		timestamp: string;
+		filters: Record<string, string | number | boolean | undefined>;
+		sortOptions: { field: string; direction: string };
+	};
+}
+
+interface SyncStatus {
+	isEnabled: boolean;
+	config: {
+		frequency: string;
+		syncTime: string;
+		timezone: string;
+		batchSize: number;
+		forceUpdate: boolean;
+		includeImages: boolean;
+		includeMarketData: boolean;
+		maxRetries: number;
+	};
+	nextSyncTime: string;
+	recentSyncs: Array<{
+		id: string;
+		syncType: string;
+		status: string;
+		recordsProcessed: number;
+		recordsCreated: number;
+		recordsUpdated: number;
+		errorMessage?: string;
+		syncDurationMs?: number;
+		startedAt: string;
+		completedAt?: string;
+	}>;
+	status: string;
+}
+
+interface TabPanelProps {
+	children?: React.ReactNode;
+	index: number;
+	value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+	const { children, value, index, ...other } = props;
+
+	return (
+		<div
+			role="tabpanel"
+			hidden={value !== index}
+			id={`analytics-tabpanel-${index}`}
+			aria-labelledby={`analytics-tab-${index}`}
+			{...other}
+		>
+			{value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+		</div>
+	);
+}
+
+const MetricCard = ({
+	title,
+	value,
+	change,
+	changeType,
+	icon: Icon,
+	description,
+	helpContent,
+	color = 'primary',
+}: {
+	title: string;
+	value: string | number;
+	change?: number;
+	changeType?: 'positive' | 'negative' | 'neutral';
+	icon: React.ComponentType;
+	description?: string;
+	helpContent?: string;
+	color?: 'primary' | 'success' | 'warning' | 'error' | 'info';
+}) => {
+	const theme = useTheme();
+
+	return (
+		<Grow in={true} timeout={800}>
+			<Card
+				sx={{
+					height: '100%',
+					position: 'relative',
+					overflow: 'hidden',
+					'&:hover': {
+						transform: 'translateY(-4px)',
+						boxShadow: theme.shadows[8],
+					},
+					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+				}}
+			>
+				<CardHeader
+					sx={{
+						pb: 1,
+						'& .MuiCardHeader-content': {
+							display: 'flex',
+							alignItems: 'center',
+							gap: 1,
+						},
+					}}
+				>
+					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+						<Typography variant="body2" color="text.secondary" fontWeight={600}>
+							{title}
+						</Typography>
+						{helpContent && (
+							<Tooltip title={helpContent} arrow>
+								<IconButton size="small" sx={{ p: 0.5 }}>
+									<InfoIcon fontSize="small" />
+								</IconButton>
+							</Tooltip>
+						)}
+					</Box>
+					<Avatar
+						sx={{
+							bgcolor: `${color}.main`,
+							color: `${color}.contrastText`,
+							width: 40,
+							height: 40,
+						}}
+					>
+						<Icon />
+					</Avatar>
+				</CardHeader>
+				<CardContent sx={{ pt: 0 }}>
+					<Typography variant="h4" fontWeight={700} gutterBottom>
+						{value}
+					</Typography>
+					<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+						{change !== undefined && (
+							<Chip
+								icon={changeType === 'positive' ? <ArrowUpIcon /> : <ArrowDownIcon />}
+								label={`${change > 0 ? '+' : ''}${change}%`}
+								size="small"
+								color={
+									changeType === 'positive'
+										? 'success'
+										: changeType === 'negative'
+										? 'error'
+										: 'default'
+								}
+								variant="outlined"
+								sx={{ fontSize: '0.75rem', height: 24 }}
+							/>
+						)}
+						<Typography variant="body2" color="text.secondary">
+							{description}
+						</Typography>
+					</Box>
+				</CardContent>
+			</Card>
+		</Grow>
+	);
+};
+
+export function ComprehensiveAnalyticsDashboard() {
+	const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+	const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [refreshing, setRefreshing] = useState(false);
+	const [syncing, setSyncing] = useState(false);
+	const [tabValue, setTabValue] = useState(0);
+	const [filters, setFilters] = useState<AnalyticsFilters>({});
+	const [sortField, setSortField] = useState('createdAt');
+	const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+	const [page, setPage] = useState(0);
+	const [rowsPerPage, setRowsPerPage] = useState(25);
+	const [showFilters, setShowFilters] = useState(false);
+	const [includeImages, setIncludeImages] = useState(true);
+	const [includeMarketData, setIncludeMarketData] = useState(true);
+	const [includeLeadScores, setIncludeLeadScores] = useState(true);
+	const [includeReports, setIncludeReports] = useState(false);
+	const [selectedAircraft, setSelectedAircraft] = useState<ComprehensiveAircraftData | null>(null);
+	const [detailsOpen, setDetailsOpen] = useState(false);
+
+	const theme = useTheme();
+
+	const fetchAnalyticsData = useCallback(async () => {
+		try {
+			setRefreshing(true);
+
+			const searchParams = new URLSearchParams({
+				page: (page + 1).toString(),
+				limit: rowsPerPage.toString(),
+				includeImages: includeImages.toString(),
+				includeMarketData: includeMarketData.toString(),
+				includeLeadScores: includeLeadScores.toString(),
+				includeReports: includeReports.toString(),
+				sortBy: sortField,
+				sortOrder: sortDirection,
+				...Object.fromEntries(
+					Object.entries(filters).filter(([, value]) => value !== undefined && value !== '')
+				),
+			});
+
+			const response = await fetch(`/api/analytics/comprehensive?${searchParams}`);
+			const data = await response.json();
+
+			if (data.success) {
+				setAnalyticsData(data);
+			} else {
+				toast.error('Failed to fetch analytics data');
+			}
+		} catch (error) {
+			console.error('Error fetching analytics data:', error);
+			toast.error('Failed to fetch analytics data');
+		} finally {
+			setLoading(false);
+			setRefreshing(false);
+		}
+	}, [
+		page,
+		rowsPerPage,
+		filters,
+		sortField,
+		sortDirection,
+		includeImages,
+		includeMarketData,
+		includeLeadScores,
+		includeReports,
+	]);
+
+	const fetchSyncStatus = useCallback(async () => {
+		try {
+			const response = await fetch('/api/sync/scheduler');
+			const data = await response.json();
+
+			if (data.success) {
+				setSyncStatus(data.data);
+			}
+		} catch (error) {
+			console.error('Error fetching sync status:', error);
+		}
+	}, []);
+
+	const triggerSync = useCallback(async () => {
+		try {
+			setSyncing(true);
+			const response = await fetch('/api/sync/scheduler', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'trigger' }),
+			});
+
+			const data = await response.json();
+			if (data.success) {
+				toast.success('Manual sync triggered successfully');
+				await fetchSyncStatus();
+			} else {
+				toast.error('Failed to trigger sync');
+			}
+		} catch (error) {
+			console.error('Error triggering sync:', error);
+			toast.error('Failed to trigger sync');
+		} finally {
+			setSyncing(false);
+		}
+	}, [fetchSyncStatus]);
+
+	useEffect(() => {
+		fetchAnalyticsData();
+	}, [fetchAnalyticsData]);
+
+	useEffect(() => {
+		fetchSyncStatus();
+	}, [fetchSyncStatus]);
+
+	const handleFilterChange = (
+		field: keyof AnalyticsFilters,
+		value: string | number | boolean | undefined
+	) => {
+		setFilters(prev => ({
+			...prev,
+			[field]: value,
+		}));
+		setPage(0);
+	};
+
+	const handleSort = (field: string) => {
+		if (sortField === field) {
+			setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+		} else {
+			setSortField(field);
+			setSortDirection('asc');
+		}
+	};
+
+	const handleChangePage = (event: unknown, newPage: number) => {
+		setPage(newPage);
+	};
+
+	const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+		setRowsPerPage(parseInt(event.target.value, 10));
+		setPage(0);
+	};
+
+	const handleViewDetails = (aircraft: ComprehensiveAircraftData) => {
+		setSelectedAircraft(aircraft);
+		setDetailsOpen(true);
+	};
+
+	const chartData = useMemo(() => {
+		if (!analyticsData?.summary) return [];
+
+		return Object.entries(analyticsData.summary.manufacturerCounts)
+			.slice(0, 10)
+			.map(([manufacturer, count]) => ({
+				manufacturer,
+				count,
+				totalValue: analyticsData.data
+					.filter(a => a.manufacturer === manufacturer)
+					.reduce((sum, a) => sum + (a.price || 0), 0),
+			}));
+	}, [analyticsData]);
+
+	const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+	if (loading) {
+		return (
+			<Container maxWidth="xl" sx={{ py: 4 }}>
+				<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+					<LinearProgress sx={{ width: '100%', maxWidth: 400 }} />
+					<Typography variant="h6" color="text.secondary">
+						Loading Comprehensive Analytics...
+					</Typography>
+				</Box>
+			</Container>
+		);
+	}
+
+	if (!analyticsData) {
+		return (
+			<Container maxWidth="xl" sx={{ py: 4 }}>
+				<Alert severity="error">
+					Failed to load analytics data. Please try refreshing the page.
+				</Alert>
+			</Container>
+		);
+	}
+
+	const { summary } = analyticsData;
+
+	return (
+		<Box
+			sx={{
+				minHeight: '100vh',
+				background: `linear-gradient(135deg, ${theme.palette.background.default} 0%, ${theme.palette.primary.light}10 100%)`,
+				py: 4,
+			}}
+		>
+			<Container maxWidth="xl">
+				{/* Header */}
+				<Fade in={true} timeout={600}>
+					<Box sx={{ mb: 4 }}>
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+							<Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+								<BarChartIcon />
+							</Avatar>
+							<Box>
+								<Typography variant="h4" fontWeight={700} color="primary.main">
+									Comprehensive Market Analytics
+								</Typography>
+								<Typography variant="body1" color="text.secondary">
+									Complete aviation market intelligence with advanced filtering and real-time
+									insights
+								</Typography>
+							</Box>
+						</Box>
+
+						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+							<Button
+								variant="outlined"
+								startIcon={
+									<RefreshIcon
+										sx={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }}
+									/>
+								}
+								onClick={fetchAnalyticsData}
+								disabled={refreshing}
+							>
+								{refreshing ? 'Refreshing...' : 'Refresh Data'}
+							</Button>
+
+							<Button
+								variant="outlined"
+								startIcon={<SyncIcon />}
+								onClick={triggerSync}
+								disabled={syncing}
+								color="secondary"
+							>
+								{syncing ? 'Syncing...' : 'Manual Sync'}
+							</Button>
+
+							<Button
+								variant="outlined"
+								startIcon={<FilterIcon />}
+								onClick={() => setShowFilters(!showFilters)}
+							>
+								{showFilters ? 'Hide Filters' : 'Show Filters'}
+							</Button>
+
+							<Button
+								variant="contained"
+								startIcon={<DownloadIcon />}
+								sx={{
+									background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+								}}
+							>
+								Export Report
+							</Button>
+
+							{/* Sync Status Indicator */}
+							{syncStatus && (
+								<Chip
+									icon={syncStatus.isEnabled ? <CheckCircleIcon /> : <ErrorIcon />}
+									label={`Next Sync: ${new Date(syncStatus.nextSyncTime).toLocaleString()}`}
+									color={syncStatus.isEnabled ? 'success' : 'error'}
+									variant="outlined"
+								/>
+							)}
+						</Box>
+					</Box>
+				</Fade>
+
+				{/* Filters Panel */}
+				{showFilters && (
+					<Fade in={true} timeout={800}>
+						<Paper sx={{ p: 3, mb: 4 }}>
+							<Typography variant="h6" gutterBottom>
+								Advanced Filters
+							</Typography>
+							<Box
+								sx={{
+									display: 'grid',
+									gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+									gap: 2,
+								}}
+							>
+								<Box sx={{ flex: 1 }}>
+									<TextField
+										fullWidth
+										label="Search"
+										value={filters.search || ''}
+										onChange={e => handleFilterChange('search', e.target.value)}
+										InputProps={{
+											startAdornment: (
+												<InputAdornment position="start">
+													<SearchIcon />
+												</InputAdornment>
+											),
+										}}
+									/>
+								</Box>
+								<Box sx={{ flex: 1 }}>
+									<FormControl fullWidth>
+										<InputLabel>Manufacturer</InputLabel>
+										<Select
+											value={filters.manufacturer || ''}
+											onChange={e => handleFilterChange('manufacturer', e.target.value)}
+										>
+											<MenuItem value="">All</MenuItem>
+											{Object.keys(summary.manufacturerCounts).map(manufacturer => (
+												<MenuItem key={manufacturer} value={manufacturer}>
+													{manufacturer}
+												</MenuItem>
+											))}
+										</Select>
+									</FormControl>
+								</Box>
+								<Box sx={{ flex: 1 }}>
+									<FormControl fullWidth>
+										<InputLabel>Status</InputLabel>
+										<Select
+											value={filters.status || ''}
+											onChange={e => handleFilterChange('status', e.target.value)}
+										>
+											<MenuItem value="">All</MenuItem>
+											{Object.keys(summary.statusCounts).map(status => (
+												<MenuItem key={status} value={status}>
+													{status}
+												</MenuItem>
+											))}
+										</Select>
+									</FormControl>
+								</Box>
+								<Box sx={{ flex: 1 }}>
+									<FormControl fullWidth>
+										<InputLabel>For Sale</InputLabel>
+										<Select
+											value={filters.forSale === undefined ? '' : filters.forSale.toString()}
+											onChange={e =>
+												handleFilterChange(
+													'forSale',
+													e.target.value === '' ? undefined : e.target.value === 'true'
+												)
+											}
+										>
+											<MenuItem value="">All</MenuItem>
+											<MenuItem value="true">Yes</MenuItem>
+											<MenuItem value="false">No</MenuItem>
+										</Select>
+									</FormControl>
+								</Box>
+								<Box sx={{ flex: 1 }}>
+									<TextField
+										fullWidth
+										label="Year Min"
+										type="number"
+										value={filters.yearMin || ''}
+										onChange={e =>
+											handleFilterChange(
+												'yearMin',
+												e.target.value ? parseInt(e.target.value) : undefined
+											)
+										}
+									/>
+								</Box>
+								<Box sx={{ flex: 1 }}>
+									<TextField
+										fullWidth
+										label="Year Max"
+										type="number"
+										value={filters.yearMax || ''}
+										onChange={e =>
+											handleFilterChange(
+												'yearMax',
+												e.target.value ? parseInt(e.target.value) : undefined
+											)
+										}
+									/>
+								</Box>
+								<Box sx={{ flex: 1 }}>
+									<TextField
+										fullWidth
+										label="Price Min"
+										type="number"
+										value={filters.priceMin || ''}
+										onChange={e =>
+											handleFilterChange(
+												'priceMin',
+												e.target.value ? parseFloat(e.target.value) : undefined
+											)
+										}
+									/>
+								</Box>
+								<Box sx={{ flex: 1 }}>
+									<TextField
+										fullWidth
+										label="Price Max"
+										type="number"
+										value={filters.priceMax || ''}
+										onChange={e =>
+											handleFilterChange(
+												'priceMax',
+												e.target.value ? parseFloat(e.target.value) : undefined
+											)
+										}
+									/>
+								</Box>
+							</Box>
+
+							<Divider sx={{ my: 2 }} />
+
+							<Typography variant="subtitle1" gutterBottom>
+								Include Additional Data
+							</Typography>
+							<Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+								<FormControlLabel
+									control={
+										<Switch
+											checked={includeImages}
+											onChange={e => setIncludeImages(e.target.checked)}
+										/>
+									}
+									label="Images"
+								/>
+								<FormControlLabel
+									control={
+										<Switch
+											checked={includeMarketData}
+											onChange={e => setIncludeMarketData(e.target.checked)}
+										/>
+									}
+									label="Market Data"
+								/>
+								<FormControlLabel
+									control={
+										<Switch
+											checked={includeLeadScores}
+											onChange={e => setIncludeLeadScores(e.target.checked)}
+										/>
+									}
+									label="Lead Scores"
+								/>
+								<FormControlLabel
+									control={
+										<Switch
+											checked={includeReports}
+											onChange={e => setIncludeReports(e.target.checked)}
+										/>
+									}
+									label="Reports"
+								/>
+							</Box>
+						</Paper>
+					</Fade>
+				)}
+
+				{/* Metrics Cards */}
+				<Fade in={true} timeout={800}>
+					<Box
+						sx={{
+							display: 'grid',
+							gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+							gap: 3,
+							mb: 4,
+						}}
+					>
+						<Box sx={{ flex: 1 }}>
+							<MetricCard
+								title="Total Aircraft"
+								value={summary.totalAircraft.toLocaleString()}
+								change={12}
+								changeType="positive"
+								icon={FlightIcon}
+								description={`${summary.forSaleCount} available for sale`}
+								helpContent="Total number of aircraft in the database"
+								color="primary"
+							/>
+						</Box>
+						<Box sx={{ flex: 1 }}>
+							<MetricCard
+								title="Total Market Value"
+								value={new Intl.NumberFormat('en-US', {
+									style: 'currency',
+									currency: 'USD',
+									minimumFractionDigits: 0,
+									maximumFractionDigits: 0,
+								}).format(summary.totalValue)}
+								change={8}
+								changeType="positive"
+								icon={DollarIcon}
+								description="Combined value of all listings"
+								helpContent="Total market value of all aircraft listings"
+								color="success"
+							/>
+						</Box>
+						<Box sx={{ flex: 1 }}>
+							<MetricCard
+								title="Average Price"
+								value={new Intl.NumberFormat('en-US', {
+									style: 'currency',
+									currency: 'USD',
+									minimumFractionDigits: 0,
+									maximumFractionDigits: 0,
+								}).format(summary.averagePrice)}
+								change={-2}
+								changeType="negative"
+								icon={TrendingUpIcon}
+								description="Per aircraft"
+								helpContent="Average price across all aircraft"
+								color="info"
+							/>
+						</Box>
+						<Box sx={{ flex: 1 }}>
+							<MetricCard
+								title="Active Listings"
+								value={summary.forSaleCount.toLocaleString()}
+								change={15}
+								changeType="positive"
+								icon={TargetIcon}
+								description="Currently for sale"
+								helpContent="Number of aircraft currently available for purchase"
+								color="warning"
+							/>
+						</Box>
+					</Box>
+				</Fade>
+
+				{/* Tabs */}
+				<Paper sx={{ mb: 4 }}>
+					<Tabs
+						value={tabValue}
+						onChange={(_, newValue) => setTabValue(newValue)}
+						variant="scrollable"
+						scrollButtons="auto"
+					>
+						<Tab label="Overview" />
+						<Tab label="Data Table" />
+						<Tab label="Market Analysis" />
+						<Tab label="Sync Status" />
+					</Tabs>
+
+					<TabPanel value={tabValue} index={0}>
+						{/* Charts */}
+						<Box
+							sx={{
+								display: 'grid',
+								gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' },
+								gap: 3,
+							}}
+						>
+							<Box sx={{ flex: 1 }}>
+								<Fade in={true} timeout={1000}>
+									<Card>
+										<CardHeader
+											title={
+												<Typography variant="h6" fontWeight={600}>
+													Aircraft by Manufacturer
+												</Typography>
+											}
+										/>
+										<CardContent>
+											<Box sx={{ height: 300 }}>
+												<ResponsiveContainer width="100%" height="100%">
+													<BarChart data={chartData}>
+														<CartesianGrid strokeDasharray="3 3" />
+														<XAxis dataKey="manufacturer" />
+														<YAxis />
+														<RechartsTooltip />
+														<Bar dataKey="count" fill={theme.palette.primary.main} />
+													</BarChart>
+												</ResponsiveContainer>
+											</Box>
+										</CardContent>
+									</Card>
+								</Fade>
+							</Box>
+
+							<Box sx={{ flex: 1 }}>
+								<Fade in={true} timeout={1200}>
+									<Card>
+										<CardHeader
+											title={
+												<Typography variant="h6" fontWeight={600}>
+													Price Distribution
+												</Typography>
+											}
+										/>
+										<CardContent>
+											<Box sx={{ height: 300 }}>
+												<ResponsiveContainer width="100%" height="100%">
+													<PieChart>
+														<Pie
+															data={summary.priceDistribution}
+															cx="50%"
+															cy="50%"
+															labelLine={false}
+															label={({ range, count }) => `${range}: ${count}`}
+															outerRadius={80}
+															fill="#8884d8"
+															dataKey="count"
+														>
+															{summary.priceDistribution.map((entry, index) => (
+																<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+															))}
+														</Pie>
+														<RechartsTooltip />
+													</PieChart>
+												</ResponsiveContainer>
+											</Box>
+										</CardContent>
+									</Card>
+								</Fade>
+							</Box>
+
+							<Box sx={{ flex: 1 }}>
+								<Fade in={true} timeout={1400}>
+									<Card>
+										<CardHeader
+											title={
+												<Typography variant="h6" fontWeight={600}>
+													Status Distribution
+												</Typography>
+											}
+										/>
+										<CardContent>
+											<Box sx={{ height: 300 }}>
+												<ResponsiveContainer width="100%" height="100%">
+													<BarChart
+														data={Object.entries(summary.statusCounts).map(([status, count]) => ({
+															status,
+															count,
+														}))}
+														layout="horizontal"
+													>
+														<CartesianGrid strokeDasharray="3 3" />
+														<XAxis type="number" />
+														<YAxis dataKey="status" type="category" width={100} />
+														<RechartsTooltip />
+														<Bar dataKey="count" fill={theme.palette.secondary.main} />
+													</BarChart>
+												</ResponsiveContainer>
+											</Box>
+										</CardContent>
+									</Card>
+								</Fade>
+							</Box>
+
+							<Box sx={{ flex: 1 }}>
+								<Fade in={true} timeout={1600}>
+									<Card>
+										<CardHeader
+											title={
+												<Typography variant="h6" fontWeight={600}>
+													Market Trends
+												</Typography>
+											}
+										/>
+										<CardContent>
+											<Box sx={{ height: 300 }}>
+												<ResponsiveContainer width="100%" height="100%">
+													<AreaChart data={chartData}>
+														<CartesianGrid strokeDasharray="3 3" />
+														<XAxis dataKey="manufacturer" />
+														<YAxis />
+														<RechartsTooltip />
+														<Area
+															type="monotone"
+															dataKey="totalValue"
+															stroke={theme.palette.primary.main}
+															fill={theme.palette.primary.light}
+														/>
+													</AreaChart>
+												</ResponsiveContainer>
+											</Box>
+										</CardContent>
+									</Card>
+								</Fade>
+							</Box>
+						</Box>
+					</TabPanel>
+
+					<TabPanel value={tabValue} index={1}>
+						{/* Data Table */}
+						<TableContainer component={Paper}>
+							<Table>
+								<TableHead>
+									<TableRow>
+										<TableCell>
+											<TableSortLabel
+												active={sortField === 'manufacturer'}
+												direction={sortField === 'manufacturer' ? sortDirection : 'asc'}
+												onClick={() => handleSort('manufacturer')}
+											>
+												Manufacturer
+											</TableSortLabel>
+										</TableCell>
+										<TableCell>
+											<TableSortLabel
+												active={sortField === 'model'}
+												direction={sortField === 'model' ? sortDirection : 'asc'}
+												onClick={() => handleSort('model')}
+											>
+												Model
+											</TableSortLabel>
+										</TableCell>
+										<TableCell>
+											<TableSortLabel
+												active={sortField === 'year'}
+												direction={sortField === 'year' ? sortDirection : 'asc'}
+												onClick={() => handleSort('year')}
+											>
+												Year
+											</TableSortLabel>
+										</TableCell>
+										<TableCell>
+											<TableSortLabel
+												active={sortField === 'price'}
+												direction={sortField === 'price' ? sortDirection : 'asc'}
+												onClick={() => handleSort('price')}
+											>
+												Price
+											</TableSortLabel>
+										</TableCell>
+										<TableCell>Status</TableCell>
+										<TableCell>Location</TableCell>
+										<TableCell>Registration</TableCell>
+										<TableCell>Actions</TableCell>
+									</TableRow>
+								</TableHead>
+								<TableBody>
+									{analyticsData.data.map(aircraft => (
+										<TableRow key={aircraft.id} hover>
+											<TableCell>{aircraft.manufacturer}</TableCell>
+											<TableCell>{aircraft.model}</TableCell>
+											<TableCell>{aircraft.year}</TableCell>
+											<TableCell>
+												{aircraft.price
+													? new Intl.NumberFormat('en-US', {
+															style: 'currency',
+															currency: 'USD',
+															minimumFractionDigits: 0,
+															maximumFractionDigits: 0,
+													  }).format(aircraft.price)
+													: 'N/A'}
+											</TableCell>
+											<TableCell>
+												<Chip
+													label={aircraft.status}
+													color={aircraft.forSale ? 'success' : 'default'}
+													size="small"
+												/>
+											</TableCell>
+											<TableCell>{aircraft.location || aircraft.baseCity}</TableCell>
+											<TableCell>{aircraft.registration}</TableCell>
+											<TableCell>
+												<IconButton size="small" onClick={() => handleViewDetails(aircraft)}>
+													<VisibilityIcon />
+												</IconButton>
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+							<TablePagination
+								rowsPerPageOptions={[10, 25, 50, 100]}
+								component="div"
+								count={analyticsData.pagination.total}
+								rowsPerPage={rowsPerPage}
+								page={page}
+								onPageChange={handleChangePage}
+								onRowsPerPageChange={handleChangeRowsPerPage}
+							/>
+						</TableContainer>
+					</TabPanel>
+
+					<TabPanel value={tabValue} index={2}>
+						{/* Market Analysis */}
+						<Box
+							sx={{
+								display: 'grid',
+								gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' },
+								gap: 3,
+							}}
+						>
+							<Box sx={{ flex: 1 }}>
+								<Card>
+									<CardHeader title="Top Manufacturers" />
+									<CardContent>
+										{summary.topManufacturers.map(item => (
+											<Box
+												key={item.manufacturer}
+												sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}
+											>
+												<Typography variant="body2">{item.manufacturer}</Typography>
+												<Chip label={item.count} size="small" />
+											</Box>
+										))}
+									</CardContent>
+								</Card>
+							</Box>
+							<Box sx={{ flex: 1 }}>
+								<Card>
+									<CardHeader title="Recent Aircraft" />
+									<CardContent>
+										{summary.recentAircraft.slice(0, 5).map(aircraft => (
+											<Box key={aircraft.id} sx={{ mb: 1 }}>
+												<Typography variant="body2" fontWeight={600}>
+													{aircraft.manufacturer} {aircraft.model}
+												</Typography>
+												<Typography variant="caption" color="text.secondary">
+													{aircraft.registration} -{' '}
+													{new Date(aircraft.createdAt).toLocaleDateString()}
+												</Typography>
+											</Box>
+										))}
+									</CardContent>
+								</Card>
+							</Box>
+						</Box>
+					</TabPanel>
+
+					<TabPanel value={tabValue} index={3}>
+						{/* Sync Status */}
+						{syncStatus && (
+							<Box
+								sx={{
+									display: 'grid',
+									gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' },
+									gap: 3,
+								}}
+							>
+								<Box sx={{ flex: 1 }}>
+									<Card>
+										<CardHeader title="Sync Configuration" />
+										<CardContent>
+											<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+												<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+													<Typography variant="body2">Status:</Typography>
+													<Chip
+														label={syncStatus.isEnabled ? 'Enabled' : 'Disabled'}
+														color={syncStatus.isEnabled ? 'success' : 'error'}
+														size="small"
+													/>
+												</Box>
+												<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+													<Typography variant="body2">Frequency:</Typography>
+													<Typography variant="body2">{syncStatus.config.frequency}</Typography>
+												</Box>
+												<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+													<Typography variant="body2">Sync Time:</Typography>
+													<Typography variant="body2">{syncStatus.config.syncTime} CST</Typography>
+												</Box>
+												<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+													<Typography variant="body2">Next Sync:</Typography>
+													<Typography variant="body2">
+														{new Date(syncStatus.nextSyncTime).toLocaleString()}
+													</Typography>
+												</Box>
+											</Box>
+										</CardContent>
+									</Card>
+								</Box>
+								<Box sx={{ flex: 1 }}>
+									<Card>
+										<CardHeader title="Recent Syncs" />
+										<CardContent>
+											{syncStatus.recentSyncs.slice(0, 5).map(sync => (
+												<Box key={sync.id} sx={{ mb: 2 }}>
+													<Box
+														sx={{
+															display: 'flex',
+															justifyContent: 'space-between',
+															alignItems: 'center',
+														}}
+													>
+														<Typography variant="body2" fontWeight={600}>
+															{sync.syncType}
+														</Typography>
+														<Chip
+															label={sync.status}
+															color={
+																sync.status === 'success'
+																	? 'success'
+																	: sync.status === 'failed'
+																	? 'error'
+																	: 'warning'
+															}
+															size="small"
+														/>
+													</Box>
+													<Typography variant="caption" color="text.secondary">
+														{sync.recordsProcessed} processed, {sync.recordsCreated} created,{' '}
+														{sync.recordsUpdated} updated
+													</Typography>
+													{sync.syncDurationMs && (
+														<Typography variant="caption" color="text.secondary" display="block">
+															Duration: {(sync.syncDurationMs / 1000).toFixed(2)}s
+														</Typography>
+													)}
+												</Box>
+											))}
+										</CardContent>
+									</Card>
+								</Box>
+							</Box>
+						)}
+					</TabPanel>
+				</Paper>
+
+				{/* Aircraft Details Dialog */}
+				<Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
+					<DialogTitle>Aircraft Details</DialogTitle>
+					<DialogContent>
+						{selectedAircraft && (
+							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+								<Typography variant="h6">
+									{selectedAircraft.manufacturer} {selectedAircraft.model}
+								</Typography>
+								<Typography variant="body2">
+									Registration: {selectedAircraft.registration}
+								</Typography>
+								<Typography variant="body2">
+									Serial Number: {selectedAircraft.serialNumber}
+								</Typography>
+								<Typography variant="body2">Year: {selectedAircraft.year}</Typography>
+								<Typography variant="body2">
+									Price:{' '}
+									{selectedAircraft.price
+										? new Intl.NumberFormat('en-US', {
+												style: 'currency',
+												currency: 'USD',
+												minimumFractionDigits: 0,
+												maximumFractionDigits: 0,
+										  }).format(selectedAircraft.price)
+										: 'N/A'}
+								</Typography>
+								<Typography variant="body2">Status: {selectedAircraft.status}</Typography>
+								<Typography variant="body2">
+									Location: {selectedAircraft.location || selectedAircraft.baseCity}
+								</Typography>
+								{selectedAircraft.totalTimeHours && (
+									<Typography variant="body2">
+										Total Time: {selectedAircraft.totalTimeHours.toLocaleString()} hours
+									</Typography>
+								)}
+								{selectedAircraft.images && selectedAircraft.images.length > 0 && (
+									<Box>
+										<Typography variant="subtitle2" gutterBottom>
+											Images ({selectedAircraft.images.length})
+										</Typography>
+										<Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+											{selectedAircraft.images.slice(0, 5).map((image, index) => (
+												<img
+													key={index}
+													src={image.url}
+													alt={image.caption || 'Aircraft image'}
+													style={{ width: 100, height: 75, objectFit: 'cover', borderRadius: 4 }}
+												/>
+											))}
+										</Box>
+									</Box>
+								)}
+							</Box>
+						)}
+					</DialogContent>
+					<DialogActions>
+						<Button onClick={() => setDetailsOpen(false)}>Close</Button>
+					</DialogActions>
+				</Dialog>
+			</Container>
+		</Box>
+	);
+}

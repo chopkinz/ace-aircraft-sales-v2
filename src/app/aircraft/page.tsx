@@ -67,9 +67,15 @@ interface Aircraft {
 	apuHours?: number;
 	cycles?: number;
 	description?: string;
-	features?: string[];
-	specifications?: Record<string, any>;
-	contactInfo?: Record<string, any>;
+	features?: string | string[];
+	specifications?: Record<string, unknown>;
+	contactInfo?: Record<string, unknown>;
+	marketData?: Record<string, unknown>;
+	maintenanceData?: string;
+	ownershipData?: Record<string, unknown>;
+	dateListed?: string;
+	name?: string;
+	image?: string;
 	forSale?: boolean;
 	images?: Array<{
 		id: string;
@@ -89,18 +95,32 @@ interface Aircraft {
 		priceTrend?: string;
 		marketTrend?: string;
 	}>;
+	reports?: Array<{
+		id: string;
+		title?: string;
+		description?: string;
+		createdAt?: string;
+	}>;
+	opportunities?: Array<{
+		id: string;
+		title?: string;
+		description?: string;
+		createdAt?: string;
+	}>;
 }
 
 export default function AircraftPage() {
 	const [aircraft, setAircraft] = useState<Aircraft[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState('');
+	const [isClient, setIsClient] = useState(false);
 	const [statusFilter, setStatusFilter] = useState<string>('all');
 	const [manufacturerFilter, setManufacturerFilter] = useState<string>('all');
 	const [priceRange] = useState<[number, number]>([0, 100000000]);
 	const [rowsPerPage, setRowsPerPage] = useState(25);
 	const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
 	const [detailsOpen, setDetailsOpen] = useState(false);
+	const [mounted, setMounted] = useState(false);
 
 	const theme = useTheme();
 
@@ -109,7 +129,8 @@ export default function AircraftPage() {
 			setLoading(true);
 			// Use comprehensive aircraft data API for full dataset
 			const response = await fetch('/api/database/aircraft/comprehensive?limit=10000');
-			const data = await response.json();
+			const data = (await response.json()) as { success: boolean; data: Aircraft[] };
+			console.log('comprehensive aircraft data', data);
 			if (data.success && data.data) {
 				// Transform the data to match our interface
 				const transformedData = data.data.map(
@@ -151,7 +172,10 @@ export default function AircraftPage() {
 						...item,
 						id: item.id || item.aircraftId,
 						registration: item.registration || item.regnbr || `N${item.aircraftId || item.id}`,
-						serialNumber: (item as any).serialNumber || (item as any).serial || '',
+						serialNumber:
+							(item as unknown as { serialNumber?: string }).serialNumber ||
+							(item as unknown as { serial?: string }).serial ||
+							'',
 						price: item.askingPrice || item.price || 0,
 						year: item.yearManufactured || item.year || item.yearmfr,
 						lastUpdated: item.updatedAt || item.lastUpdated,
@@ -166,6 +190,33 @@ export default function AircraftPage() {
 						forSale: item.forSale !== undefined ? item.forSale : item.status === 'ACTIVE',
 						manufacturer: item.manufacturer || item.make,
 						location: item.location || item.basecity,
+						// Map comprehensive API fields
+						aircraftId: (item as unknown as { aircraftId?: number }).aircraftId,
+						name: (item as unknown as { name?: string }).name,
+						variant: (item as unknown as { variant?: string }).variant,
+						yearManufactured: (item as unknown as { yearManufactured?: number }).yearManufactured,
+						askingPrice: (item as unknown as { askingPrice?: number }).askingPrice,
+						image: (item as unknown as { image?: string }).image,
+						description: (item as unknown as { description?: string }).description,
+						specifications: (item as unknown as { specifications?: Record<string, unknown> })
+							.specifications,
+						features: (item as unknown as { features?: string }).features,
+						marketData: (item as unknown as { marketData?: Record<string, unknown> }).marketData,
+						maintenanceData: (item as unknown as { maintenanceData?: string }).maintenanceData,
+						ownershipData: (item as unknown as { ownershipData?: Record<string, unknown> })
+							.ownershipData,
+						dateListed: (item as unknown as { dateListed?: string }).dateListed,
+						createdAt: (item as unknown as { createdAt?: string }).createdAt,
+						updatedAt: (item as unknown as { updatedAt?: string }).updatedAt,
+						images: (item as unknown as { images?: Array<Record<string, unknown>> }).images || [],
+						marketDataRecords:
+							(item as unknown as { marketDataRecords?: Array<Record<string, unknown>> })
+								.marketDataRecords || [],
+						reports:
+							(item as unknown as { reports?: Array<Record<string, unknown>> }).reports || [],
+						opportunities:
+							(item as unknown as { opportunities?: Array<Record<string, unknown>> })
+								.opportunities || [],
 						status:
 							item.status === 'ACTIVE' || item.status === 'For Sale'
 								? 'For Sale'
@@ -182,8 +233,11 @@ export default function AircraftPage() {
 			} else {
 				// Fallback to basic aircraft API
 				const fallbackResponse = await fetch('/api/database/aircraft');
-				const fallbackData = await fallbackResponse.json();
-				if (fallbackData.success) {
+				const fallbackData = (await fallbackResponse.json()) as {
+					success: boolean;
+					data: Aircraft[];
+				};
+				if (fallbackData.success && fallbackData.data) {
 					const transformedData = fallbackData.data.map(
 						(item: {
 							id?: string;
@@ -213,7 +267,10 @@ export default function AircraftPage() {
 						}) => ({
 							...item,
 							registration: item.registration || `N${item.aircraftId || item.id}`,
-							serialNumber: (item as any).serialNumber || (item as any).serial || '',
+							serialNumber:
+								(item as unknown as { serialNumber?: string }).serialNumber ||
+								(item as unknown as { serial?: string }).serial ||
+								'',
 							price: item.askingPrice || item.price || 0,
 							year: item.yearManufactured || item.year,
 							lastUpdated: item.updatedAt || item.lastUpdated,
@@ -252,6 +309,8 @@ export default function AircraftPage() {
 	};
 
 	useEffect(() => {
+		setIsClient(true);
+		setMounted(true);
 		fetchAircraft();
 	}, []);
 
@@ -287,14 +346,7 @@ export default function AircraftPage() {
 		return filtered;
 	}, [aircraft, searchTerm, statusFilter, manufacturerFilter, priceRange]);
 
-	// Sort aircraft by last updated date
-	const sortedAircraft = useMemo(() => {
-		return [...filteredAircraft].sort((a, b) => {
-			const aValue = new Date(a.lastUpdated || 0).getTime();
-			const bValue = new Date(b.lastUpdated || 0).getTime();
-			return bValue - aValue; // Most recent first
-		});
-	}, [filteredAircraft]);
+	// Aircraft data is already sorted by the API
 
 	const manufacturers = useMemo(() => {
 		const unique = [...new Set(aircraft.map(a => a.manufacturer))];
@@ -362,13 +414,16 @@ export default function AircraftPage() {
 			headerName: 'Year',
 			width: 80,
 			type: 'number',
+			renderCell: (params: { value?: number }) => (
+				<Typography variant="body2">{params.value || 'N/A'}</Typography>
+			),
 		},
 		{
 			field: 'price',
 			headerName: 'Price',
 			width: 140,
 			type: 'number',
-			renderCell: params => (
+			renderCell: (params: { value?: number }) => (
 				<Typography variant="body2" fontWeight={600} color="success.main">
 					{formatCurrency(params.value)}
 				</Typography>
@@ -396,6 +451,49 @@ export default function AircraftPage() {
 					size="small"
 					variant="outlined"
 				/>
+			),
+		},
+		{
+			field: 'serialNumber',
+			headerName: 'Serial #',
+			width: 120,
+			renderCell: (params: { value?: string }) => (
+				<Typography variant="body2" fontFamily="monospace">
+					{params.value || 'N/A'}
+				</Typography>
+			),
+		},
+		{
+			field: 'totalTimeHours',
+			headerName: 'Total Time',
+			width: 110,
+			type: 'number',
+			renderCell: (params: { value?: number }) => (
+				<Typography variant="body2">
+					{params.value ? `${params.value.toLocaleString()}h` : 'N/A'}
+				</Typography>
+			),
+		},
+		{
+			field: 'engineHours',
+			headerName: 'Engine Time',
+			width: 110,
+			type: 'number',
+			renderCell: (params: { value?: number }) => (
+				<Typography variant="body2">
+					{params.value ? `${params.value.toLocaleString()}h` : 'N/A'}
+				</Typography>
+			),
+		},
+		{
+			field: 'cycles',
+			headerName: 'Cycles',
+			width: 90,
+			type: 'number',
+			renderCell: (params: { value?: number }) => (
+				<Typography variant="body2">
+					{params.value ? params.value.toLocaleString() : 'N/A'}
+				</Typography>
 			),
 		},
 		{
@@ -434,7 +532,8 @@ export default function AircraftPage() {
 		},
 	];
 
-	if (loading) {
+	// Prevent hydration mismatch by not rendering dynamic content until mounted
+	if (!mounted || loading) {
 		return (
 			<Container maxWidth="xl" sx={{ py: 4 }}>
 				<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
@@ -475,26 +574,30 @@ export default function AircraftPage() {
 						</Box>
 
 						<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-							<Chip
-								icon={<FlightIcon />}
-								label={`${aircraft.length} Total Aircraft`}
-								color="primary"
-								variant="outlined"
-							/>
-							<Chip
-								icon={<TrendingUpIcon />}
-								label={`${aircraft.filter(a => a.status === 'For Sale').length} For Sale`}
-								color="success"
-								variant="outlined"
-							/>
-							<Chip
-								icon={<DollarIcon />}
-								label={`${formatCurrency(
-									aircraft.reduce((sum, a) => sum + (a.price || 0), 0)
-								)} Total Value`}
-								color="info"
-								variant="outlined"
-							/>
+							{isClient && (
+								<>
+									<Chip
+										icon={<FlightIcon />}
+										label={`${aircraft.length} Total Aircraft`}
+										color="primary"
+										variant="outlined"
+									/>
+									<Chip
+										icon={<TrendingUpIcon />}
+										label={`${aircraft.filter(a => a.status === 'For Sale').length} For Sale`}
+										color="success"
+										variant="outlined"
+									/>
+									<Chip
+										icon={<DollarIcon />}
+										label={`${formatCurrency(
+											aircraft.reduce((sum, a) => sum + (a.price || 0), 0)
+										)} Total Value`}
+										color="info"
+										variant="outlined"
+									/>
+								</>
+							)}
 						</Box>
 					</Box>
 				</Fade>
@@ -676,7 +779,13 @@ export default function AircraftPage() {
 											</Typography>
 											<Chip
 												label={selectedAircraft.status}
-												color={getStatusColor(selectedAircraft.status) as any}
+												color={
+													getStatusColor(selectedAircraft.status) as
+														| 'success'
+														| 'error'
+														| 'warning'
+														| 'default'
+												}
 												size="small"
 											/>
 										</Box>
@@ -769,6 +878,37 @@ export default function AircraftPage() {
 									</Box>
 								</Box>
 
+								{/* Additional Information */}
+								<Box sx={{ flex: '1 1 300px', minWidth: 300 }}>
+									<Typography variant="h6" gutterBottom>
+										Additional Information
+									</Typography>
+									<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+										<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+											<Typography variant="body2" color="text.secondary">
+												Aircraft ID:
+											</Typography>
+											<Typography variant="body2">
+												{selectedAircraft.aircraftId || 'N/A'}
+											</Typography>
+										</Box>
+										<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+											<Typography variant="body2" color="text.secondary">
+												Variant:
+											</Typography>
+											<Typography variant="body2">{selectedAircraft.variant || 'N/A'}</Typography>
+										</Box>
+										<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+											<Typography variant="body2" color="text.secondary">
+												Description:
+											</Typography>
+											<Typography variant="body2">
+												{selectedAircraft.description || 'N/A'}
+											</Typography>
+										</Box>
+									</Box>
+								</Box>
+
 								{/* Contact Information */}
 								<Box sx={{ flex: '1 1 300px', minWidth: 300 }}>
 									<Typography variant="h6" gutterBottom>
@@ -813,9 +953,18 @@ export default function AircraftPage() {
 											Features
 										</Typography>
 										<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-											{selectedAircraft.features.map((feature, index) => (
-												<Chip key={index} label={feature} size="small" variant="outlined" />
-											))}
+											{Array.isArray(selectedAircraft.features)
+												? selectedAircraft.features.map((feature: string, index: number) => (
+														<Chip key={index} label={feature} size="small" variant="outlined" />
+												  ))
+												: selectedAircraft.features && (
+														<Chip
+															key={0}
+															label={selectedAircraft.features}
+															size="small"
+															variant="outlined"
+														/>
+												  )}
 										</Box>
 									</Box>
 								)}
@@ -873,7 +1022,7 @@ export default function AircraftPage() {
 										<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
 											{selectedAircraft.images.slice(0, 4).map((image, index) => (
 												<Box
-													key={index}
+													key={image.id || index}
 													sx={{
 														width: 120,
 														height: 80,

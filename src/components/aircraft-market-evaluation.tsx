@@ -57,16 +57,61 @@ import toast from 'react-hot-toast';
 
 interface Aircraft {
 	id: string;
+	aircraftId?: number;
 	manufacturer: string;
 	model: string;
 	year: number;
+	yearManufactured?: number;
 	status: string;
 	askingPrice?: number;
+	price?: number;
 	lastSalePrice?: number;
 	totalTimeHours?: number;
+	engineHours?: number;
+	apuHours?: number;
+	cycles?: number;
 	location?: string;
+	baseCity?: string;
+	baseState?: string;
+	baseCountry?: string;
 	serialNumber?: string;
 	registration?: string;
+	currency?: string;
+	forSale?: boolean;
+	// Enhanced comprehensive fields
+	specifications?: {
+		enrichment?: any;
+		techSummary?: {
+			engines?: number;
+			avionicsSuite?: string;
+			maintenanceDueInDays?: number;
+			interiorYear?: number;
+			exteriorYear?: number;
+			featuresCount?: number;
+			imageCount?: number;
+		};
+		rawData?: any;
+	};
+	images?: Array<{
+		url?: string;
+		imageUrl?: string;
+		caption?: string;
+	}>;
+	contactInfo?: {
+		broker?: string;
+		phone?: string;
+		email?: string;
+	};
+	marketDataRecords?: Array<any>;
+	leadScores?: Array<any>;
+	reports?: Array<any>;
+	ownershipData?: any;
+	companyRelations?: Array<any>;
+	evaluations?: Array<any>;
+	features?: string;
+	rawData?: any;
+	createdAt?: string;
+	updatedAt?: string;
 }
 
 export function AircraftMarketEvaluation() {
@@ -90,19 +135,44 @@ export function AircraftMarketEvaluation() {
 				if (response.ok) {
 					const data = await response.json();
 					if (data.success && data.data) {
-						// Transform the data to match our interface
+						// Transform the data to match our interface with comprehensive fields
 						const transformedData = data.data.map((item: any) => ({
 							id: item.id || item.aircraftId,
+							aircraftId: item.aircraftId,
 							manufacturer: item.manufacturer || item.make,
 							model: item.model,
 							year: item.yearManufactured || item.year || item.yearmfr,
+							yearManufactured: item.yearManufactured,
 							status: item.status || 'ACTIVE',
 							askingPrice: item.askingPrice || item.price,
+							price: item.price,
 							lastSalePrice: item.lastSalePrice,
 							totalTimeHours: item.totalTimeHours || item.aftt,
+							engineHours: item.engineHours,
+							apuHours: item.apuHours,
+							cycles: item.cycles,
 							location: item.location || item.basecity,
+							baseCity: item.baseCity,
+							baseState: item.baseState,
+							baseCountry: item.baseCountry,
 							serialNumber: item.serialNumber || item.sernbr,
 							registration: item.registration || item.regnbr,
+							currency: item.currency || 'USD',
+							forSale: item.forSale,
+							// Enhanced comprehensive fields
+							specifications: item.specifications,
+							images: item.images || [],
+							contactInfo: item.contactInfo,
+							marketDataRecords: item.marketDataRecords || [],
+							leadScores: item.leadScores || [],
+							reports: item.reports || [],
+							ownershipData: item.ownershipData,
+							companyRelations: item.companyRelations || [],
+							evaluations: item.evaluations || [],
+							features: item.features,
+							rawData: item.rawData,
+							createdAt: item.createdAt,
+							updatedAt: item.updatedAt,
 						}));
 						setAircraft(transformedData);
 					} else {
@@ -222,7 +292,7 @@ export function AircraftMarketEvaluation() {
 		}
 	};
 
-	// DataGrid columns
+	// DataGrid columns with comprehensive data
 	const columns: GridColDef[] = [
 		{
 			field: 'manufacturer',
@@ -246,6 +316,16 @@ export function AircraftMarketEvaluation() {
 			width: 100,
 		},
 		{
+			field: 'registration',
+			headerName: 'Registration',
+			width: 120,
+			renderCell: params => (
+				<Typography variant="body2" fontWeight={500}>
+					{params.value || 'N/A'}
+				</Typography>
+			),
+		},
+		{
 			field: 'status',
 			headerName: 'Status',
 			width: 120,
@@ -253,7 +333,11 @@ export function AircraftMarketEvaluation() {
 				<Chip
 					label={params.value}
 					color={
-						params.value === 'ACTIVE' ? 'success' : params.value === 'SOLD' ? 'error' : 'default'
+						params.value === 'ACTIVE' || params.value === 'For Sale'
+							? 'success'
+							: params.value === 'SOLD'
+							? 'error'
+							: 'default'
 					}
 					size="small"
 				/>
@@ -261,14 +345,89 @@ export function AircraftMarketEvaluation() {
 		},
 		{
 			field: 'askingPrice',
-			headerName: 'Asking Price',
+			headerName: 'Price',
 			width: 140,
-			renderCell: params => (params.value ? `$${params.value.toLocaleString()}` : 'N/A'),
+			renderCell: params => {
+				const price = params.value || params.row.price;
+				return price ? `$${price.toLocaleString()}` : 'N/A';
+			},
+		},
+		{
+			field: 'totalTimeHours',
+			headerName: 'Total Time',
+			width: 120,
+			renderCell: params => (
+				<Typography variant="body2">
+					{params.value ? `${params.value.toLocaleString()} hrs` : 'N/A'}
+				</Typography>
+			),
 		},
 		{
 			field: 'location',
 			headerName: 'Location',
 			width: 150,
+			renderCell: params => (
+				<Box display="flex" alignItems="center" gap={0.5}>
+					<MapPinIcon fontSize="small" color="action" />
+					<Typography variant="body2">{params.value || params.row.baseCity || 'N/A'}</Typography>
+				</Box>
+			),
+		},
+		{
+			field: 'specifications',
+			headerName: 'Tech Data',
+			width: 120,
+			renderCell: params => {
+				const techSummary = params.value?.techSummary;
+				const engines = techSummary?.engines || 0;
+				const avionics = techSummary?.avionicsSuite;
+				return (
+					<Box>
+						<Typography variant="caption" display="block">
+							{engines} Engine{engines !== 1 ? 's' : ''}
+						</Typography>
+						{avionics && (
+							<Typography variant="caption" color="text.secondary" display="block">
+								{avionics}
+							</Typography>
+						)}
+					</Box>
+				);
+			},
+		},
+		{
+			field: 'images',
+			headerName: 'Images',
+			width: 100,
+			renderCell: params => {
+				const imageCount = params.value?.length || 0;
+				return (
+					<Chip
+						label={`${imageCount} image${imageCount !== 1 ? 's' : ''}`}
+						size="small"
+						color={imageCount > 0 ? 'success' : 'default'}
+						variant="outlined"
+					/>
+				);
+			},
+		},
+		{
+			field: 'contactInfo',
+			headerName: 'Contact',
+			width: 120,
+			renderCell: params => {
+				const contact = params.value;
+				return contact?.broker ? (
+					<Box display="flex" alignItems="center" gap={0.5}>
+						<PhoneIcon fontSize="small" color="action" />
+						<Typography variant="caption">{contact.broker}</Typography>
+					</Box>
+				) : (
+					<Typography variant="caption" color="text.secondary">
+						N/A
+					</Typography>
+				);
+			},
 		},
 		{
 			field: 'actions',
@@ -369,8 +528,8 @@ export function AircraftMarketEvaluation() {
 					</Fade>
 
 					{/* Stats Cards */}
-					<Grid container spacing={3} sx={{ mb: 4 }}>
-						<Grid item xs={12} sm={6} md={3}>
+					<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>
+						<Box sx={{ flex: '1 1 250px', minWidth: 250 }}>
 							<Card>
 								<CardContent>
 									<Box display="flex" justifyContent="between" alignItems="center">
@@ -386,8 +545,8 @@ export function AircraftMarketEvaluation() {
 									</Box>
 								</CardContent>
 							</Card>
-						</Grid>
-						<Grid item xs={12} sm={6} md={3}>
+						</Box>
+						<Box sx={{ flex: '1 1 250px', minWidth: 250 }}>
 							<Card>
 								<CardContent>
 									<Box display="flex" justifyContent="between" alignItems="center">
@@ -403,8 +562,8 @@ export function AircraftMarketEvaluation() {
 									</Box>
 								</CardContent>
 							</Card>
-						</Grid>
-						<Grid item xs={12} sm={6} md={3}>
+						</Box>
+						<Box sx={{ flex: '1 1 250px', minWidth: 250 }}>
 							<Card>
 								<CardContent>
 									<Box display="flex" justifyContent="between" alignItems="center">
@@ -420,8 +579,8 @@ export function AircraftMarketEvaluation() {
 									</Box>
 								</CardContent>
 							</Card>
-						</Grid>
-						<Grid item xs={12} sm={6} md={3}>
+						</Box>
+						<Box sx={{ flex: '1 1 250px', minWidth: 250 }}>
 							<Card>
 								<CardContent>
 									<Box display="flex" justifyContent="between" alignItems="center">
@@ -437,8 +596,8 @@ export function AircraftMarketEvaluation() {
 									</Box>
 								</CardContent>
 							</Card>
-						</Grid>
-					</Grid>
+						</Box>
+					</Box>
 
 					{/* Filters */}
 					<Card sx={{ mb: 4 }}>
@@ -448,7 +607,7 @@ export function AircraftMarketEvaluation() {
 								Search & Filters
 							</Typography>
 							<Grid container spacing={3}>
-								<Grid item xs={12} md={4}>
+								<Grid xs={12} md={4}>
 									<TextField
 										fullWidth
 										label="Search Aircraft"
@@ -463,7 +622,7 @@ export function AircraftMarketEvaluation() {
 										}}
 									/>
 								</Grid>
-								<Grid item xs={12} md={4}>
+								<Grid xs={12} md={4}>
 									<FormControl fullWidth>
 										<InputLabel>Manufacturer</InputLabel>
 										<Select
@@ -480,7 +639,7 @@ export function AircraftMarketEvaluation() {
 										</Select>
 									</FormControl>
 								</Grid>
-								<Grid item xs={12} md={4}>
+								<Grid xs={12} md={4}>
 									<FormControl fullWidth>
 										<InputLabel>Status</InputLabel>
 										<Select
@@ -544,7 +703,7 @@ export function AircraftMarketEvaluation() {
 						<DialogContent>
 							{selectedAircraft && (
 								<Grid container spacing={3}>
-									<Grid item xs={12} md={6}>
+									<Grid item xs={12} md={6} component="div">
 										<Typography variant="h6" gutterBottom>
 											{selectedAircraft.manufacturer} {selectedAircraft.model}
 										</Typography>
@@ -555,7 +714,13 @@ export function AircraftMarketEvaluation() {
 											Status:{' '}
 											<Chip
 												label={selectedAircraft.status}
-												color={getStatusColor(selectedAircraft.status) as any}
+												color={
+													getStatusColor(selectedAircraft.status) as
+														| 'success'
+														| 'error'
+														| 'warning'
+														| 'default'
+												}
 												size="small"
 											/>
 										</Typography>
@@ -565,7 +730,7 @@ export function AircraftMarketEvaluation() {
 											</Typography>
 										)}
 									</Grid>
-									<Grid item xs={12} md={6}>
+									<Grid item xs={12} md={6} component="div">
 										<Typography variant="body2" color="text.secondary">
 											Serial Number: {selectedAircraft.serialNumber || 'N/A'}
 										</Typography>

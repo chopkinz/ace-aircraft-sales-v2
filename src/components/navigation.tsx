@@ -68,12 +68,6 @@ export function Navigation() {
 			icon: DescriptionIcon,
 			description: 'Generate market reports',
 		},
-		{
-			name: 'Logs',
-			href: '/logs',
-			icon: ActivityIcon,
-			description: 'System activity logs',
-		},
 	];
 
 	const handleDrawerToggle = () => {
@@ -171,9 +165,9 @@ export function Navigation() {
 		<>
 			<AppBar
 				position="fixed"
-				elevation={scrolled ? 4 : 0}
+				elevation={scrolled ? 1 : 0}
 				sx={{
-					transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+					transition: 'all 0.3s ease-in-out',
 					bgcolor: scrolled ? 'background.paper' : 'transparent',
 					backdropFilter: scrolled ? 'blur(20px)' : 'none',
 					borderBottom: scrolled ? 1 : 0,
@@ -187,7 +181,7 @@ export function Navigation() {
 							<Box
 								sx={{
 									p: 1.5,
-									borderRadius: 2,
+									borderRadius: 1,
 									color: 'primary.contrastText',
 									display: 'flex',
 									alignItems: 'center',
@@ -219,7 +213,7 @@ export function Navigation() {
 											sx={{
 												bgcolor: isActive ? 'primary.main' : 'transparent',
 												color: isActive ? 'primary.contrastText' : 'text.secondary',
-												borderRadius: 2,
+												borderRadius: 1,
 												px: 2,
 												py: 1,
 												fontWeight: isActive ? 600 : 500,
@@ -227,7 +221,7 @@ export function Navigation() {
 													bgcolor: isActive ? 'primary.dark' : 'action.hover',
 													transform: 'translateY(-1px)',
 												},
-												transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+												transition: 'all 0.2s ease-in-out',
 												position: 'relative',
 											}}
 										>
@@ -258,6 +252,7 @@ export function Navigation() {
 								onClick={toggleTheme}
 								sx={{
 									color: 'text.secondary',
+									borderRadius: 1,
 									'&:hover': {
 										bgcolor: 'action.hover',
 										color: 'primary.main',
@@ -276,6 +271,7 @@ export function Navigation() {
 								sx={{
 									display: { md: 'none' },
 									color: 'text.secondary',
+									borderRadius: 1,
 									'&:hover': {
 										bgcolor: 'action.hover',
 										color: 'primary.main',

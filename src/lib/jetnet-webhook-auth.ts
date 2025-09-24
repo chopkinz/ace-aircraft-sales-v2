@@ -175,7 +175,9 @@ export class JetNetWebhookAuthManager {
 
 				if (attempt === maxRetries) {
 					throw new Error(
-						`Webhook authentication failed after ${maxRetries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`
+						`Webhook authentication failed after ${maxRetries} attempts: ${
+							error instanceof Error ? error.message : 'Unknown error'
+						}`
 					);
 				}
 

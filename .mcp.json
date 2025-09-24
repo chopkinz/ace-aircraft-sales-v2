@@ -1,0 +1,16 @@
+{
+	"mcpServers": {
+		"ace-aircraft-sales-ghl": {
+			"command": "npx",
+			"args": [
+				"mcp-remote",
+				"https://services.leadconnectorhq.com/mcp/",
+				"--header",
+				"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6IlpaOENobnpYVlhhR2RhWkkzNng4IiwidmVyc2lvbiI6MSwiaWF0IjoxNzUyNDk3NzY2NjgwLCJzdWIiOiJRb1hPc0NPRXFhVHRtaFBZd1pPVCJ9.B1pWcO2YqYA7Ddxdf4kXuffmZAwMrz5chyNVybMFeTg",
+				"--header",
+				"locationId: ZZ8ChnzXVXaGdaZI36x8"
+			],
+			"type": "stdio"
+		}
+	}
+}
